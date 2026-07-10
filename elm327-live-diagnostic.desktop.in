@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=ELM327 Live Diagnostic
+Comment=OBD-II live data, plots and guided tests
+Exec="@APP_DIR@/start_linux.sh"
+Icon=io.github.open-diagnostics.elm327-live-diagnostic
+Terminal=false
+Categories=Utility;Development;
+Keywords=OBD;OBD-II;ELM327;Diagnostics;Automotive;
+StartupNotify=true
+StartupWMClass=io.github.open-diagnostics.elm327-live-diagnostic
