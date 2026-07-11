@@ -1,4 +1,4 @@
-# ELM327 Live Diagnostic 3.0
+# ELM327 Live Diagnostic 3.1
 
 A professional cross-platform PySide6 application for standard OBD-II live data through a serial ELM327 adapter.
 
@@ -8,17 +8,17 @@ The application is intended for diagnostic measurements, repeatable RPM tests an
 
 - Live dashboard for selected OBD-II PIDs
 - Dedicated Settings page for serial connection and PID configuration
-- PID presets for lean, balanced and full measurements
+- Persistent, editable PID presets for lean, balanced, full and user-defined measurements
 - Plot acquisition starts only when the user presses **Start**
 - Every active plot session is automatically written to a temporary CSV file
 - Export the complete session or an explicitly selected time range
-- Guided multi-stage tests with target RPM, tolerance and phase countdown
+- Persistent, editable multi-stage tests with target RPM, tolerance, phase countdown and an optional PID preset
 - Export the last test period as a separate CSV file
 - Manual time markers stored in plots and CSV files
 - Open and plot recordings created by version 2 or version 3
 - Generic DTC reading and clearing
 - Raw Mode 06 access and custom ELM/OBD commands
-- Optional Linux Bluetooth RFCOMM helper
+- Optional Linux Bluetooth RFCOMM helper with paired-device discovery and a persistent adapter list
 - Application icon and GNOME desktop integration
 
 ## Screens and workflow
@@ -47,7 +47,9 @@ The Plot tab provides explicit start and end times in seconds. Use **Use visible
 
 ### Test assistant
 
-Available multi-stage presets include:
+Test routines and their stages can be created, edited, reordered, saved and deleted. Each routine can optionally select a PID preset before it starts. The selected routine, stage definitions and PID association survive application restarts.
+
+Available built-in multi-stage presets include:
 
 - RPM step test: 10 s idle, 20 s at 1500 rpm, 20 s idle, 20 s at 2500 rpm, 20 s idle
 - Extended fuel-trim test
@@ -57,6 +59,8 @@ Available multi-stage presets include:
 During an RPM stage, the countdown advances only while the measured speed is inside the configured tolerance. After completion or an intentional abort, the captured test interval can be exported with **Export last test**.
 
 ## PID presets
+
+PID presets are stored persistently. Selecting a preset applies it immediately. After changing individual PID checkboxes, use **Save / update** to overwrite the selected preset or **New** to create another one. The **Balanced** fallback can be edited but not deleted.
 
 - **Lean diagnostics**: RPM, coolant temperature, STFT, LTFT, MAP, throttle position and oxygen sensor B1S1
 - **Balanced**: common diagnostic values enabled by default
@@ -110,7 +114,7 @@ Pair Bluetooth ELM327 adapters in Windows settings. Select the generated COM por
 
 ## Linux Bluetooth serial helper
 
-The optional helper uses BlueZ tools:
+The optional helper can list paired BlueZ devices, lets the user save named adapters and remembers the selected MAC address, RFCOMM channel and serial device. It uses:
 
 - `bluetoothctl connect <address>`
 - `rfcomm bind <device> <address> <channel>`
@@ -135,7 +139,8 @@ The adapter must already be paired and trusted. Channel 1 is common for ELM327 S
 ## Project files
 
 ```text
-elm327_twingo_gui.py
+elm327_app.py                 # version 3.1 entry point and persistent profile UI
+elm327_twingo_gui.py          # diagnostic and plotting core
 assets/io.github.open-diagnostics.elm327-live-diagnostic.svg
 elm327-live-diagnostic.desktop.in
 requirements.txt

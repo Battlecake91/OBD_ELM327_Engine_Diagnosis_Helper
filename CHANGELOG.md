@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.1.0
+
+- Added persistent, user-editable PID presets.
+- Preserved the selected PID preset while individual PIDs are modified so it can be updated without losing the edits.
+- Added persistent application, connection, plot-window and test-assistant settings.
+- Added Bluetooth device discovery through `bluetoothctl` and a persistent named adapter list.
+- Added editable and persistent multi-stage test routines.
+- Added an optional PID preset association for every saved test routine.
+- Changed the Linux and Windows launchers to use the 3.1 entry point.
+
 ## 3.0.0
 
 - Reworked the complete interface in English.
