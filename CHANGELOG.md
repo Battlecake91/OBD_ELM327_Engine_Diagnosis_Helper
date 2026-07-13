@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Added a reproducible PyInstaller build for a standalone Windows x64 executable.
+- Added embedded Windows icon and version metadata.
+- Added a GitHub Actions workflow that tests and builds the executable on Windows.
+- Added automatic GitHub release creation with executable and SHA-256 checksum assets.
+- Kept persistent application settings outside the executable through Qt's native settings backend.
+
 ## 3.1.0
 
 - Added persistent, user-editable PID presets.
