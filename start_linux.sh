@@ -7,4 +7,4 @@ if [[ ! -x .venv/bin/python ]]; then
     exit 1
 fi
 
-exec .venv/bin/python elm327_app.py "$@"
+exec .venv/bin/python elm327_portable.py "$@"
