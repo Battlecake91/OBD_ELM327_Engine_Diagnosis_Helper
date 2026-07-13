@@ -14,13 +14,25 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication, QImage, QPainter
 from PySide6.QtSvg import QSvgRenderer
 
-from elm327_app import APP_VERSION
-
 ROOT = Path(__file__).resolve().parents[1]
+APP_SOURCE = ROOT / "elm327_app.py"
 SOURCE_ICON = ROOT / "assets" / "io.github.open-diagnostics.elm327-live-diagnostic.svg"
 OUTPUT_DIR = ROOT / "build" / "windows"
 OUTPUT_ICON = OUTPUT_DIR / "app.ico"
 OUTPUT_VERSION = OUTPUT_DIR / "version_info.txt"
+
+
+def read_app_version() -> str:
+    """Read APP_VERSION without importing the GUI application."""
+    source = APP_SOURCE.read_text(encoding="utf-8")
+    match = re.search(
+        r"^APP_VERSION\s*=\s*['\"]([^'\"]+)['\"]\s*$",
+        source,
+        flags=re.MULTILINE,
+    )
+    if not match:
+        raise RuntimeError(f"APP_VERSION not found in {APP_SOURCE}")
+    return match.group(1)
 
 
 def version_tuple(version: str) -> tuple[int, int, int, int]:
@@ -51,7 +63,15 @@ def generate_icon() -> None:
         source.convert("RGBA").save(
             OUTPUT_ICON,
             format="ICO",
-            sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+            sizes=[
+                (16, 16),
+                (24, 24),
+                (32, 32),
+                (48, 48),
+                (64, 64),
+                (128, 128),
+                (256, 256),
+            ],
         )
     png_path.unlink(missing_ok=True)
 
@@ -59,7 +79,8 @@ def generate_icon() -> None:
 
 
 def generate_version_resource() -> None:
-    version = version_tuple(APP_VERSION)
+    app_version = read_app_version()
+    version = version_tuple(app_version)
     version_csv = ", ".join(str(value) for value in version)
     text = f"""VSVersionInfo(
   ffi=FixedFileInfo(
@@ -79,12 +100,12 @@ def generate_version_resource() -> None:
         [
           StringStruct('CompanyName', 'Open Diagnostics'),
           StringStruct('FileDescription', 'ELM327 Live Diagnostic'),
-          StringStruct('FileVersion', '{APP_VERSION}'),
+          StringStruct('FileVersion', '{app_version}'),
           StringStruct('InternalName', 'OBD_ELM327_Engine_Diagnosis_Helper'),
           StringStruct('LegalCopyright', 'Copyright (c) 2026 ELM327 Live Diagnostic contributors'),
           StringStruct('OriginalFilename', 'OBD_ELM327_Engine_Diagnosis_Helper.exe'),
           StringStruct('ProductName', 'ELM327 Live Diagnostic'),
-          StringStruct('ProductVersion', '{APP_VERSION}')
+          StringStruct('ProductVersion', '{app_version}')
         ]
       )
     ]),
