@@ -8,5 +8,5 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
-".venv\Scripts\python.exe" elm327_app.py
+".venv\Scripts\python.exe" elm327_portable.py
 if errorlevel 1 pause
