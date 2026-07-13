@@ -65,7 +65,7 @@ jobs:
           path: |
             dist/OBD_ELM327_Engine_Diagnosis_Helper.exe
             dist/OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt
-            pyinstaller-build.log
+            windows-build.log
           if-no-files-found: warn
           retention-days: 30
 
