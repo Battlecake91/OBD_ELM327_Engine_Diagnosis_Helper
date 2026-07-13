@@ -58,13 +58,15 @@ jobs:
         run: .\build_windows.ps1 -SkipInstall
 
       - name: Upload workflow artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: OBD_ELM327_Engine_Diagnosis_Helper-windows-x64
           path: |
             dist/OBD_ELM327_Engine_Diagnosis_Helper.exe
             dist/OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt
-          if-no-files-found: error
+            pyinstaller-build.log
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Resolve release metadata
