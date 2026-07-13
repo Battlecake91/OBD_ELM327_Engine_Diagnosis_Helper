@@ -18,8 +18,17 @@ try {
     python build_tools/generate_windows_resources.py
     if ($LASTEXITCODE -ne 0) { throw "Windows resource generation failed." }
 
-    python -m PyInstaller --noconfirm --clean ELM327_Engine_Diagnosis_Helper.spec
-    if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed." }
+    $BuildLog = Join-Path $PSScriptRoot "pyinstaller-build.log"
+    python -m PyInstaller --noconfirm --clean ELM327_Engine_Diagnosis_Helper.spec *> $BuildLog
+    $BuildExitCode = $LASTEXITCODE
+    if ($BuildExitCode -ne 0) {
+        Write-Host ""
+        Write-Host "Last PyInstaller log lines:"
+        Get-Content -Path $BuildLog -Tail 100
+        throw "PyInstaller build failed with exit code $BuildExitCode."
+    }
+
+    Get-Content -Path $BuildLog -Tail 20
 
     $ExePath = Join-Path $PSScriptRoot "dist\OBD_ELM327_Engine_Diagnosis_Helper.exe"
     if (-not (Test-Path $ExePath)) {
@@ -34,6 +43,7 @@ try {
     Write-Host "Build completed:"
     Write-Host "  $ExePath"
     Write-Host "  $HashPath"
+    Write-Host "  settings.json will be created next to the executable at first start."
 }
 finally {
     Pop-Location
