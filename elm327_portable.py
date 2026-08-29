@@ -11,6 +11,10 @@ import elm327_app as app
 
 app.QSettings = JsonSettings
 
+from opel_kw82_probe import install as install_kw82_probe
+
+install_kw82_probe()
+
 
 if __name__ == "__main__":
     raise SystemExit(app.main())
