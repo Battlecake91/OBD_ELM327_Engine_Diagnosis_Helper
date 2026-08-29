@@ -3,11 +3,12 @@
 
 The 1999 Astra-G X16XEL uses a Delco HSFI-C / Multec-H ECU on K-line. Public
 Opel KWP2000 traces show the engine controller addressed as 0x11 from tester
-address 0xF1, with a Fast-Init followed by StartCommunication (service 0x81).
+address 0xF1, with Fast Init followed by StartCommunication (service 0x81).
 
-This module therefore probes only that session-establishment path. It does not
-send SAE Mode 01 discovery, clear-DTC commands, coding, actuator commands or
-memory writes.
+After a positive StartCommunication response this probe performs one additional
+read-only request, ReadEcuIdentification 0x1A with Opel identification option
+0x80. It does not send SAE Mode 01 discovery, DTC clearing, coding, actuator,
+security-access or memory-write commands.
 """
 
 from __future__ import annotations
@@ -26,8 +27,9 @@ import elm327_app as app
 # Preserve the original settings token so existing installations stay selected.
 KW82_PROTOCOL_TOKEN = "OPEL_KW82_9600"
 KW82_PROTOCOL_LABEL = "Opel Astra G X16XEL / Multec-H KWP2000 Fast-Init probe"
-OPel_TESTER_ADDRESS = 0xF1
+OPEL_TESTER_ADDRESS = 0xF1
 OPEL_ENGINE_TARGETS = (0x11, 0x10)
+OPEL_IDENT_REQUEST = "1A80"
 
 
 @dataclass(frozen=True)
@@ -115,12 +117,26 @@ def _hex_rows(response: str, command: str = "") -> list[list[int]]:
         return []
 
 
+def _contains_service(response: str, command: str, service: int, option: int | None = None) -> bool:
+    for row in _hex_rows(response, command):
+        for index, value in enumerate(row):
+            if value != service:
+                continue
+            if option is None:
+                return True
+            if index + 1 < len(row) and row[index + 1] == option:
+                return True
+    return False
+
+
 def _kwp_start_accepted(response: str) -> bool:
     """Positive response to StartCommunication service 0x81 is service 0xC1."""
-    for row in _hex_rows(response, "81"):
-        if 0xC1 in row:
-            return True
-    return False
+    return _contains_service(response, "81", 0xC1)
+
+
+def _identification_accepted(response: str) -> bool:
+    """Positive response to ReadEcuIdentification 0x1A is service 0x5A."""
+    return _contains_service(response, OPEL_IDENT_REQUEST, 0x5A, 0x80)
 
 
 def _valid_buffer_bytes(response: str) -> str:
@@ -136,12 +152,24 @@ def _valid_buffer_bytes(response: str) -> str:
     return f"length={length}, valid=" + " ".join(f"{value:02X}" for value in valid)
 
 
+def _identification_ascii(response: str) -> str:
+    """Return printable ASCII from the 0x5A/0x80 identification payload."""
+    for row in _hex_rows(response, OPEL_IDENT_REQUEST):
+        for index in range(max(0, len(row) - 1)):
+            if row[index:index + 2] != [0x5A, 0x80]:
+                continue
+            data = row[index + 2:]
+            text = "".join(chr(value) if 32 <= value <= 126 else " " for value in data)
+            return " ".join(text.split()) or "no printable ASCII"
+    return "no 0x5A 0x80 payload"
+
+
 def probe_kw82_engine(
     elm: core.ELM327,
     log: Callable[[str], None],
     targets: tuple[int, ...] = OPEL_ENGINE_TARGETS,
 ) -> tuple[bool, str]:
-    """Probe Opel KWP2000 Fast Init and StartCommunication on the engine K-line."""
+    """Probe Opel KWP2000 Fast Init, StartCommunication and read-only ECU ID."""
     steps: list[ProbeStep] = []
     attempts: list[FastInitAttempt] = []
 
@@ -152,37 +180,41 @@ def probe_kw82_engine(
 
     success = False
     successful_target: int | None = None
+    identification: ProbeStep | None = None
 
     for raw_target in targets:
         target = raw_target & 0xFF
-        header = f"81{target:02X}{OPel_TESTER_ADDRESS:02X}"
+        header = f"81{target:02X}{OPEL_TESTER_ADDRESS:02X}"
 
-        # Protocol 5 is ISO 14230-4 KWP with Fast Init.  ATFI emits the 25/25 ms
-        # wake-up pulse.  With header 81 11 F1, sending service 81 produces the
-        # documented Opel frame 81 11 F1 81 <checksum>.
         step("ATPC")
         step("ATSP5")
         step("ATKW0")
         step("ATIB10")
         step("ATAT0")
         step("ATSTFF")
+        step("ATAL")
         step(f"ATSH{header}")
+        # KWP TesterPresent (3E) is a harmless keep-alive. Several Opel ELM
+        # traces configure this wake-up message before Fast Init.
+        step(f"ATWM{header}3E")
         fast_init = step("ATFI", 3.0)
         start_response = step("81", 4.0)
         buffer_response = step("ATBD", 1.5)
 
-        attempt = FastInitAttempt(
-            target=target,
-            header=header,
-            fast_init=fast_init,
-            start_response=start_response,
-            buffer_response=buffer_response,
+        attempts.append(
+            FastInitAttempt(
+                target=target,
+                header=header,
+                fast_init=fast_init,
+                start_response=start_response,
+                buffer_response=buffer_response,
+            )
         )
-        attempts.append(attempt)
 
         if _kwp_start_accepted(start_response.response):
             success = True
             successful_target = target
+            identification = step(OPEL_IDENT_REQUEST, 5.0)
             break
 
     protocol = step("ATDP", 1.0)
@@ -230,13 +262,19 @@ def probe_kw82_engine(
     ]
 
     if successful_target is not None:
+        ident_ok = bool(identification and _identification_accepted(identification.response))
         lines.extend(
             (
                 "",
+                "ReadEcuIdentification 0x1A / option 0x80:",
+                identification.response if identification is not None else "not sent",
+                f"Identification response: {'POSITIVE 0x5A 0x80' if ident_ok else 'no positive 0x5A 0x80 response'}",
+                f"Printable identification text: {_identification_ascii(identification.response) if identification else 'none'}",
+                "",
                 "Interpretation:",
                 f"The ECU at target 0x{successful_target:02X} returned a positive KWP2000 "
-                "StartCommunication response (0xC1). The physical/session layer is established; "
-                "the next safe request is read-only ECU identification (service 0x1A).",
+                "StartCommunication response (0xC1). The physical/session layer is established. "
+                "The additional 0x1A80 request is read-only ECU identification.",
             )
         )
     else:
@@ -246,8 +284,7 @@ def probe_kw82_engine(
                 "Interpretation:",
                 "No positive KWP2000 StartCommunication response (0xC1) was received after "
                 "Fast Init. Target 0x11 is the documented Opel engine-ECU address used first; "
-                "0x10 is tried only as a conservative fallback. Check the raw response to ATFI "
-                "and command 81 before changing any further timing or addressing.",
+                "0x10 is tried only as a conservative fallback.",
             )
         )
 
@@ -257,7 +294,7 @@ def probe_kw82_engine(
     lines.extend(
         (
             "",
-            "Safety: this probe performs interface/session initialization only; no write or clear command is sent.",
+            "Safety: Fast Init, TesterPresent and ReadEcuIdentification are read/session-only here; no write, clear, actuator or security command is sent.",
         )
     )
     return success, "\n".join(lines)
@@ -288,7 +325,7 @@ class OpelKW82ProbeWorker(core.OBDWorker):
             self.connected.emit(f"{identity} · Opel Multec-H KWP probe", set())
             self.probe_ready.emit(report)
             self.status.emit(
-                "Multec-H KWP StartCommunication succeeded; inspect the report."
+                "Multec-H KWP session established; ECU identification requested."
                 if success
                 else "Multec-H Fast-Init probe finished without a C1 response; inspect the raw log."
             )
