@@ -17,14 +17,15 @@ class FakeELM:
         return values.pop(0)
 
 
-def test_opel_probe_uses_kwp_default_address_and_10400_first():
+def test_opel_probe_uses_fast_init_target_11_and_accepts_c1():
     elm = FakeELM(
         {
-            "ATSI": ["BUS INIT: OK\r>"],
-            "ATKW": ["1:08 2:08\r>"],
-            "ATDP": ["ISO 14230-4 (KWP 5BAUD)\r>"],
-            "ATDPN": ["4\r>"],
-            "ATBD": ["02 55 08 AA BB CC DD EE FF 00 11 22 33\r>"],
+            "ATFI": ["OK\r>"],
+            "81": ["83 F1 11 C1 EF 8F C4\r>"],
+            "ATBD": ["07 83 F1 11 C1 EF 8F C4 00 00 00 00 00\r>"],
+            "ATDP": ["ISO 14230-4 (KWP FAST)\r>"],
+            "ATDPN": ["5\r>"],
+            "ATKW": ["1:EF 2:8F\r>"],
         }
     )
     log = []
@@ -32,47 +33,53 @@ def test_opel_probe_uses_kwp_default_address_and_10400_first():
     success, report = probe_kw82_engine(elm, log.append)
 
     assert success is True
-    assert "ATSP4" in elm.commands
+    assert "ATSP5" in elm.commands
     assert "ATIB10" in elm.commands
-    assert "ATIIA33" in elm.commands
-    assert "ATIB96" not in elm.commands
-    assert "ATSI" in elm.commands
-    assert "Slow initialization: SUCCESS" in report
-    assert "length=2, valid=55 08" in report
-    assert any("> ATSI" in entry for entry in log)
+    assert "ATSH8111F1" in elm.commands
+    assert "ATFI" in elm.commands
+    assert "81" in elm.commands
+    assert "ATSH8110F1" not in elm.commands
+    assert "KWP StartCommunication: SUCCESS" in report
+    assert "target ECU 0x11" in report
+    assert "length=7, valid=83 F1 11 C1 EF 8F C4" in report
+    assert any("> 81" in entry for entry in log)
 
 
-def test_opel_probe_falls_back_to_9600_after_default_kwp_init_fails():
+def test_opel_probe_falls_back_to_target_10_after_no_data_on_11():
     elm = FakeELM(
         {
-            "ATSI": ["BUS INIT: ...ERROR\r>", "BUS INIT: OK\r>"],
-            "ATKW": ["1:-- 2:--\r>", "1:12 2:34\r>"],
-            "ATBD": ["00 00 00 00 00 00 00 00 00 00 00 00 00\r>", "01 55 00 00 00 00 00 00 00 00 00 00 00\r>"],
+            "ATFI": ["OK\r>", "OK\r>"],
+            "81": ["NO DATA\r>", "83 F1 10 C1 EF 8F C3\r>"],
+            "ATBD": [
+                "00 00 00 00 00 00 00 00 00 00 00 00 00\r>",
+                "07 83 F1 10 C1 EF 8F C3 00 00 00 00 00\r>",
+            ],
         }
     )
 
     success, report = probe_kw82_engine(elm, lambda _entry: None)
 
     assert success is True
-    assert elm.commands.index("ATIB10") < elm.commands.index("ATIB96")
-    assert elm.commands.count("ATSI") == 2
-    assert elm.commands.count("ATSP4") == 2
-    assert "KWP slow init / Opel 9600 fallback" in report
-    assert "Slow initialization: SUCCESS" in report
+    assert elm.commands.index("ATSH8111F1") < elm.commands.index("ATSH8110F1")
+    assert elm.commands.count("ATFI") == 2
+    assert elm.commands.count("81") == 2
+    assert "target ECU 0x10" in report
+    assert "KWP StartCommunication: SUCCESS" in report
 
 
-def test_opel_probe_reports_unsupported_iso_baud_commands():
+def test_opel_probe_reports_no_positive_response_when_fast_init_fails():
     elm = FakeELM(
         {
-            "ATIB10": ["?\r>"],
-            "ATIB96": ["?\r>", "?\r>"],
+            "ATFI": ["?\r>", "?\r>"],
+            "81": ["NO DATA\r>", "NO DATA\r>"],
+            "ATBD": ["00\r>", "00\r>"],
         }
     )
 
     success, report = probe_kw82_engine(elm, lambda _entry: None)
 
     assert success is False
-    assert "ATSI" not in elm.commands
-    assert "ATIB10" in report
-    assert "ATIB96" in report
-    assert "NO SUCCESSFUL INITIALIZATION" in report
+    assert elm.commands.count("ATSP5") == 2
+    assert elm.commands.count("ATFI") == 2
+    assert "ATFI" in report
+    assert "NO POSITIVE C1 RESPONSE" in report
