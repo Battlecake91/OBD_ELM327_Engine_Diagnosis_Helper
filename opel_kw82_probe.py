@@ -39,11 +39,15 @@ class ProbeStep:
     ok: bool
 
 
+def _response_without_prompt(response: str) -> str:
+    return response.upper().replace(">", "").strip()
+
+
 def _response_ok(response: str) -> bool:
-    upper = response.upper()
-    if not upper.strip():
+    upper = _response_without_prompt(response)
+    if not upper:
         return False
-    if "?" == upper.strip():
+    if upper == "?":
         return False
     return not any(
         token in upper
@@ -130,7 +134,7 @@ def probe_kw82_engine(
         step("ATKW0")            # Accept non-standard keyword bytes from old Opel ECUs.
         baud = step("ATIB96")    # KW82 commonly runs at 9600 baud.
         step("ATAT0")            # Fixed timing makes the experiment reproducible.
-        step("ATSTFF")            # Give the old ECU plenty of time to answer.
+        step("ATSTFF")           # Give the old ECU plenty of time to answer.
         step(f"ATIIA{address:02X}")
 
         if not baud.ok:
@@ -158,7 +162,8 @@ def probe_kw82_engine(
     unsupported = [
         item.command
         for item in steps
-        if item.response.strip() == "?" or "unsupported" in item.response.lower()
+        if _response_without_prompt(item.response) == "?"
+        or "unsupported" in item.response.lower()
     ]
 
     lines = [
