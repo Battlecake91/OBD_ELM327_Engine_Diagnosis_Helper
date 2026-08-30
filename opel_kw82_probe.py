@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""Experimental Opel Astra-G X16XEL / Multec-H KWP2000 probing.
+"""Opel Astra-G X16XEL / Multec-H KWP2000 integration.
 
-The 1999 Astra-G X16XEL uses a Delco HSFI-C / Multec-H ECU on K-line. Public
-Opel KWP2000 traces show the engine controller addressed as 0x11 from tester
-address 0xF1, with Fast Init followed by StartCommunication (service 0x81).
-
-After a positive StartCommunication response this probe performs one additional
-read-only request, ReadEcuIdentification 0x1A with Opel identification option
-0x80. It does not send SAE Mode 01 discovery, DTC clearing, coding, actuator,
-security-access or memory-write commands.
+The vehicle-specific transport has been verified on a real 1999 Astra G:
+KWP2000 Fast Init, target 0x11, tester 0xF1, keywords EF/8F.  This module keeps
+that proven setup while exposing normal DTC buttons and live-data samples to the
+existing dashboard/plot/CSV pipeline.
 """
 
 from __future__ import annotations
 
+import queue
+import time
 from dataclasses import dataclass
 from typing import Callable
 
@@ -22,11 +20,12 @@ from PySide6.QtWidgets import QMessageBox
 
 import elm327_twingo_gui as core
 import elm327_app as app
+import opel_multec_profile as profile
 
 
 # Preserve the original settings token so existing installations stay selected.
 KW82_PROTOCOL_TOKEN = "OPEL_KW82_9600"
-KW82_PROTOCOL_LABEL = "Opel Astra G X16XEL / Multec-H KWP2000 Fast-Init probe"
+KW82_PROTOCOL_LABEL = "Opel Astra G X16XEL / Multec-H"
 OPEL_TESTER_ADDRESS = 0xF1
 OPEL_ENGINE_TARGETS = (0x11, 0x10)
 OPEL_IDENT_REQUEST = "1A80"
@@ -140,7 +139,6 @@ def _identification_accepted(response: str) -> bool:
 
 
 def _valid_buffer_bytes(response: str) -> str:
-    """Decode ATBD's leading length byte and hide stale bytes after that length."""
     rows = _hex_rows(response, "ATBD")
     if not rows or not rows[0]:
         return "none"
@@ -153,7 +151,6 @@ def _valid_buffer_bytes(response: str) -> str:
 
 
 def _identification_ascii(response: str) -> str:
-    """Return printable ASCII from the 0x5A/0x80 identification payload."""
     for row in _hex_rows(response, OPEL_IDENT_REQUEST):
         for index in range(max(0, len(row) - 1)):
             if row[index:index + 2] != [0x5A, 0x80]:
@@ -169,7 +166,7 @@ def probe_kw82_engine(
     log: Callable[[str], None],
     targets: tuple[int, ...] = OPEL_ENGINE_TARGETS,
 ) -> tuple[bool, str]:
-    """Probe Opel KWP2000 Fast Init, StartCommunication and read-only ECU ID."""
+    """Establish the verified Opel KWP2000 session and read ECU identification."""
     steps: list[ProbeStep] = []
     attempts: list[FastInitAttempt] = []
 
@@ -194,8 +191,6 @@ def probe_kw82_engine(
         step("ATSTFF")
         step("ATAL")
         step(f"ATSH{header}")
-        # KWP TesterPresent (3E) is a harmless keep-alive. Several Opel ELM
-        # traces configure this wake-up message before Fast Init.
         step(f"ATWM{header}3E")
         fast_init = step("ATFI", 3.0)
         start_response = step("81", 4.0)
@@ -245,14 +240,13 @@ def probe_kw82_engine(
         )
 
     lines = [
-        "Experimental Opel Astra G X16XEL / Multec-H KWP2000 Fast-Init probe",
-        "====================================================================",
+        "Opel Astra G X16XEL / Multec-H KWP2000 session",
+        "================================================",
         "",
         "Target: engine ECU on vehicle DLC pin 7",
         "Tester address: 0xF1",
-        "No standard OBD-II 0100 request was sent.",
         "",
-        "Probe attempts:",
+        "Session attempts:",
         *attempt_reports,
         "",
         f"KWP StartCommunication: {'SUCCESS' if success else 'NO POSITIVE C1 RESPONSE'}",
@@ -273,8 +267,7 @@ def probe_kw82_engine(
                 "",
                 "Interpretation:",
                 f"The ECU at target 0x{successful_target:02X} returned a positive KWP2000 "
-                "StartCommunication response (0xC1). The physical/session layer is established. "
-                "The additional 0x1A80 request is read-only ECU identification.",
+                "StartCommunication response. Normal X16XEL DTC and live-data functions can now be used.",
             )
         )
     else:
@@ -282,34 +275,66 @@ def probe_kw82_engine(
             (
                 "",
                 "Interpretation:",
-                "No positive KWP2000 StartCommunication response (0xC1) was received after "
-                "Fast Init. Target 0x11 is the documented Opel engine-ECU address used first; "
-                "0x10 is tried only as a conservative fallback.",
+                "No positive KWP2000 StartCommunication response was received after Fast Init.",
             )
         )
 
     if unsupported:
         lines.extend(("", "Adapter commands not supported:", "  " + ", ".join(unsupported)))
 
-    lines.extend(
-        (
-            "",
-            "Safety: Fast Init, TesterPresent and ReadEcuIdentification are read/session-only here; no write, clear, actuator or security command is sent.",
-        )
-    )
     return success, "\n".join(lines)
 
 
 class OpelKW82ProbeWorker(core.OBDWorker):
-    """Connection worker that does not start standard SAE PID polling."""
+    """X16XEL KWP worker with block live polling and Opel DTC requests."""
 
     probe_ready = Signal(str)
+
+    def _process_requests(self, limit: int = 100) -> None:
+        if self.elm is None or self.stop_event.is_set():
+            return
+
+        processed = 0
+        while processed < limit and not self.stop_event.is_set():
+            try:
+                request, payload = self.requests.get_nowait()
+            except queue.Empty:
+                break
+            processed += 1
+
+            try:
+                if request == "read_dtcs":
+                    raw = self.elm.command(profile.OPEL_READ_DTCS, 5.0)
+                    self.raw_log.emit(f"> {profile.OPEL_READ_DTCS}\n{raw.strip()}")
+                    self.dtcs_ready.emit(profile.parse_dtc_response(raw))
+                elif request == "clear_dtcs":
+                    raw = self.elm.command(profile.OPEL_CLEAR_DTCS, 5.0)
+                    self.raw_log.emit(f"> {profile.OPEL_CLEAR_DTCS}\n{raw.strip()}")
+                    if not profile.clear_dtc_response_ok(raw):
+                        raise core.ELM327Error("ECU did not confirm ClearDiagnosticInformation.")
+                    verify = self.elm.command(profile.OPEL_READ_DTCS, 5.0)
+                    self.raw_log.emit(f"> {profile.OPEL_READ_DTCS}\n{verify.strip()}")
+                    records = profile.parse_dtc_response(verify)
+                    self.dtcs_ready.emit(records)
+                    self.status.emit(
+                        "DTC memory cleared and verified: no DTCs remain."
+                        if not records
+                        else f"Clear accepted; {len(records)} DTC(s) returned immediately."
+                    )
+                elif request == "mode06":
+                    self.mode06_ready.emit("Mode 06 is not used by the X16XEL Multec-H profile.")
+                elif request == "custom" and payload:
+                    response = self.elm.command(payload, 5.0)
+                    self.custom_ready.emit(payload, response)
+            except Exception as exc:
+                if not self.stop_event.is_set():
+                    self.status.emit(f"Diagnostic command failed: {exc}")
 
     def run(self) -> None:
         reason = "Connection closed."
         try:
             self.status.emit(
-                f"Opening {self.port} at {self.baudrate} baud for Opel Multec-H KWP Fast-Init probe…"
+                f"Opening {self.port} at {self.baudrate} baud for Opel X16XEL / Multec-H…"
             )
             self.elm = core.ELM327(
                 port=self.port,
@@ -322,24 +347,59 @@ class OpelKW82ProbeWorker(core.OBDWorker):
             identity = initialize_adapter_for_kw82_probe(self.elm, self.raw_log.emit)
             success, report = probe_kw82_engine(self.elm, self.raw_log.emit)
 
-            self.connected.emit(f"{identity} · Opel Multec-H KWP probe", set())
+            self.connected.emit(f"{identity} · Opel X16XEL / Multec-H", set())
             self.probe_ready.emit(report)
             self.status.emit(
-                "Multec-H KWP session established; ECU identification requested."
+                "Multec-H session established; live data and DTC functions are available."
                 if success
-                else "Multec-H Fast-Init probe finished without a C1 response; inspect the raw log."
+                else "Multec-H Fast Init failed; inspect the raw log."
             )
 
+            adapter_voltage_due = 0.0
             while not self.stop_event.is_set():
                 self._process_requests(limit=5)
-                self.stop_event.wait(0.03)
+
+                if not success or self.pause_event.is_set():
+                    self.stop_event.wait(0.04)
+                    continue
+
+                requested = [
+                    key for key in self._get_enabled_keys()
+                    if key in profile.SUPPORTED_SENSOR_KEYS
+                ]
+                if requested:
+                    try:
+                        raw = self.elm.command(profile.OPEL_LIVE_REQUEST, 3.0)
+                        values = profile.decode_live_values(raw)
+                        now = time.monotonic()
+                        for key in requested:
+                            value = values.get(key)
+                            if value is not None:
+                                self.sample.emit(key, float(value), now)
+                    except core.ELM327Error as exc:
+                        if self.stop_event.is_set():
+                            break
+                        self.raw_log.emit(f"{profile.OPEL_LIVE_REQUEST}: {exc}")
+
+                now = time.monotonic()
+                if now >= adapter_voltage_due:
+                    try:
+                        voltage = self.elm.read_adapter_voltage()
+                        if voltage is not None:
+                            self.sample.emit("adapter_voltage", voltage, now)
+                    except Exception as exc:
+                        if not self.stop_event.is_set():
+                            self.raw_log.emit(f"ATRV: {exc}")
+                    adapter_voltage_due = now + 2.0
+
+                self.stop_event.wait(max(0.08, self.poll_pause_ms / 1000.0))
 
         except (serial.SerialException, core.ELM327Error, OSError) as exc:
             reason = str(exc)
             if not self.stop_event.is_set():
-                self.status.emit(f"Opel Multec-H probe error: {exc}")
+                self.status.emit(f"Opel X16XEL error: {exc}")
         except Exception as exc:
-            reason = f"Unexpected Opel Multec-H probe error: {exc}"
+            reason = f"Unexpected Opel X16XEL error: {exc}"
             if not self.stop_event.is_set():
                 self.status.emit(reason)
         finally:
@@ -349,13 +409,16 @@ class OpelKW82ProbeWorker(core.OBDWorker):
 
 
 class ExperimentalMainWindow(app.MainWindow):
-    """Add the X16XEL legacy KWP probe without disturbing normal OBD-II."""
+    """Integrate the verified X16XEL profile into the existing application UI."""
 
     def __init__(self):
         self.kw82_probe_active = False
         super().__init__()
         if self.protocol_combo.findData(KW82_PROTOCOL_TOKEN) < 0:
             self.protocol_combo.addItem(KW82_PROTOCOL_LABEL, KW82_PROTOCOL_TOKEN)
+        if hasattr(self, "pid_presets"):
+            self.pid_presets.setdefault("Opel X16XEL live", list(profile.DEFAULT_SENSOR_KEYS))
+            self._refresh_pid_combo(self.pid_preset_combo.currentText())
         saved = str(self.settings.value("connection/protocol", "ATSP0"))
         if saved == KW82_PROTOCOL_TOKEN:
             index = self.protocol_combo.findData(KW82_PROTOCOL_TOKEN)
@@ -368,10 +431,32 @@ class ExperimentalMainWindow(app.MainWindow):
         selected = self.protocol_combo.currentData() == KW82_PROTOCOL_TOKEN
         if selected and not self.connected_state:
             self.connection_detail_label.setToolTip(
-                "Experimental read-only Fast-Init probe for the Astra-G X16XEL / Multec-H KWP2000 ECU."
+                "Verified KWP2000 Fast-Init profile for Astra-G X16XEL / Multec-H on DLC pin 7."
             )
         else:
             self.connection_detail_label.setToolTip("")
+
+    def _effective_worker_keys(self) -> list[str]:
+        if self.kw82_probe_active:
+            return sorted(self.enabled_keys & profile.SUPPORTED_SENSOR_KEYS)
+        return super()._effective_worker_keys()
+
+    def _apply_supported_state(self) -> None:
+        if not self.kw82_probe_active:
+            super()._apply_supported_state()
+            return
+        for sensor in core.SENSORS:
+            row = self.pid_row_by_key[sensor.key]
+            mapped = sensor.key in profile.SUPPORTED_SENSOR_KEYS
+            status_item = self.pid_table.item(row, 4)
+            status_item.setText("Multec-H 2101" if mapped else "Not mapped in profile")
+            status_item.setToolTip(
+                "Decoded from the X16XEL ReadDataByLocalIdentifier 0x2101 block."
+                if mapped
+                else "This generic OBD-II measurement is not mapped for the X16XEL profile yet."
+            )
+            command_item = self.value_table.item(self.dashboard_row_by_key[sensor.key], 3)
+            command_item.setText(profile.LIVE_COMMAND_LABELS.get(sensor.key, "not mapped"))
 
     def _toggle_connection(self) -> None:
         if self.worker is not None and self.worker.isRunning():
@@ -389,20 +474,24 @@ class ExperimentalMainWindow(app.MainWindow):
             self.tabs.setCurrentWidget(self.settings_tab)
             return
 
+        if not (self.enabled_keys & profile.SUPPORTED_SENSOR_KEYS):
+            self.enabled_keys = set(profile.DEFAULT_SENSOR_KEYS)
+            self._apply_pid_visibility()
+
         self._save_settings()
         self.kw82_probe_active = True
         self.offline_mode = False
         self.connect_button.setText("Disconnect")
         self.connect_button.setEnabled(True)
         self._set_connection_controls(False)
-        self.connection_status_label.setText("● Probing Multec-H KWP Fast Init…")
+        self.connection_status_label.setText("● Connecting to X16XEL…")
         self.connection_status_label.setStyleSheet("color: #d38b00;")
 
         worker = OpelKW82ProbeWorker(
             port=port,
             baudrate=int(self.baud_combo.currentText()),
-            enabled_keys=[],
-            poll_pause_ms=0,
+            enabled_keys=sorted(self.enabled_keys & profile.SUPPORTED_SENSOR_KEYS),
+            poll_pause_ms=self.poll_pause_spin.value(),
             parent=self,
         )
         worker.command_timeout = self.command_timeout_spin.value()
@@ -423,24 +512,68 @@ class ExperimentalMainWindow(app.MainWindow):
         super()._on_connected(identity, supported)
         if not self.kw82_probe_active:
             return
-        self.plot_start_button.setEnabled(False)
-        self.polling_pause_button.setEnabled(False)
-        self.read_dtcs_button.setEnabled(False)
-        self.clear_dtcs_button.setEnabled(False)
+        self.plot_start_button.setEnabled(True)
+        self.polling_pause_button.setEnabled(True)
+        self.read_dtcs_button.setEnabled(True)
+        self.clear_dtcs_button.setEnabled(True)
         self.mode06_button.setEnabled(False)
+        # Guided/RPM test integration comes later; phase 1 is live plotting + DTCs.
         self.single_test_button.setEnabled(False)
         self.preset_start_button.setEnabled(False)
-        self.connection_status_label.setText("● Opel Multec-H probe connected")
-        self.connection_status_label.setStyleSheet("color: #8c6bc4;")
+        self.connection_status_label.setText("● Opel X16XEL connected")
+        self.connection_status_label.setStyleSheet("color: #27964b;")
         self.statusBar().showMessage(
-            "Experimental Multec-H probe connected; no standard OBD-II polling is active."
+            "X16XEL / Multec-H connected; live 0x2101 polling and DTC functions are active."
         )
+
+    def _read_dtcs(self) -> None:
+        if not self.kw82_probe_active:
+            super()._read_dtcs()
+            return
+        worker = self._require_worker()
+        if worker is not None:
+            self.dtc_output.setPlainText("Reading X16XEL fault memory…")
+            worker.request_dtcs()
+
+    def _clear_dtcs(self) -> None:
+        if not self.kw82_probe_active:
+            super()._clear_dtcs()
+            return
+        worker = self._require_worker()
+        if worker is None:
+            return
+        answer = QMessageBox.warning(
+            self,
+            "Clear X16XEL DTCs",
+            "Clear the stored DTCs in the X16XEL engine ECU? The application will read the fault memory again immediately afterwards to verify the result.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            worker.request_clear_dtcs()
+
+    @Slot(object)
+    def _show_dtcs(self, dtcs: object) -> None:
+        if not self.kw82_probe_active:
+            super()._show_dtcs(dtcs)
+            return
+        records = list(dtcs)
+        if not records:
+            self.dtc_output.setPlainText("No stored DTCs.")
+            return
+        lines = ["DTC      Meaning", "------------------------------"]
+        for record in records:
+            code = getattr(record, "code", str(record))
+            description = getattr(record, "description", "")
+            lines.append(f"{code:<8} {description}")
+        self.dtc_output.setPlainText("\n".join(lines))
 
     @Slot(str)
     def _show_kw82_probe(self, report: str) -> None:
-        self.dtc_output.setPlainText(report)
-        self.raw_output.append("\n=== Opel Multec-H KWP probe report ===\n" + report)
-        self.tabs.setCurrentWidget(self.dtc_output.parentWidget())
+        self.raw_output.append("\n=== Opel X16XEL / Multec-H session report ===\n" + report)
+        self.dtc_output.setPlainText(
+            "X16XEL / Multec-H session established.\n\nUse Read DTCs for the fault memory; live values are available on Dashboard and Plot."
+        )
 
     @Slot(str)
     def _on_disconnected(self, reason: str) -> None:
