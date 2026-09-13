@@ -21,8 +21,11 @@ def test_main_window_starts_without_plot_capture(tmp_path, monkeypatch):
         assert APP_VERSION == "3.1.0"
         assert window.capture_active is False
         assert window.csv_writer is None
-        assert window.tabs.count() == 6
+        assert window.tabs.count() == 8
         assert window.tabs.tabText(5) == "Settings"
+        assert window.tabs.tabText(6) in {"Fehlerspeicher", "Fault memory"}
+        assert window.tabs.tabText(7) in {"Live-Daten", "Live data"}
+        assert window.guided_mode.mode == "expert"
         assert window.pid_presets
         assert window.test_profiles
     finally:
