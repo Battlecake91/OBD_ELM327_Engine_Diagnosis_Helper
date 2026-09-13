@@ -65,5 +65,6 @@
   "sensor.speed": "Vehicle speed",
   "sensor.runtime": "Engine runtime",
   "sensor.fuel_level": "Fuel level",
-  "sensor.ecu_voltage": "Control module voltage"
+  "sensor.ecu_voltage": "Control module voltage",
+  "easy.time": "Time"
 }
