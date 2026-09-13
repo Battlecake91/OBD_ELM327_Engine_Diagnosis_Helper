@@ -9,7 +9,7 @@ Beim Programmstart erscheint eine Auswahl:
 - **Geführter Assistent / Easy** für eine möglichst einfache Diagnose.
 - **Expertenmodus / Expert** für Rohdaten, Protokollauswahl, Diagnosekommandos, Tests und erweiterte Einstellungen.
 
-Oben im Hauptfenster bleibt dauerhaft eine kompakte Umschaltung **Easy | Expert** sichtbar. Zwischen den Modi kann jederzeit gewechselt werden.
+Oben im Hauptfenster bleibt dauerhaft eine kompakte Umschaltung **Expert | Easy** sichtbar. Zwischen den Modi kann jederzeit gewechselt werden.
 
 ## Geführte Verbindung
 
