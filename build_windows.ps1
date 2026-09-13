@@ -60,8 +60,14 @@ try {
         -LogPath $BuildLog
 
     Invoke-LoggedNativeCommand `
-        -Label "PyInstaller" `
+        -Label "PyInstaller application" `
         -Command { python -m PyInstaller --noconfirm --clean ELM327_Engine_Diagnosis_Helper.spec } `
+        -LogPath $BuildLog `
+        -Append
+
+    Invoke-LoggedNativeCommand `
+        -Label "PyInstaller updater" `
+        -Command { python -m PyInstaller --noconfirm ELM327_Updater.spec } `
         -LogPath $BuildLog `
         -Append
 
@@ -72,13 +78,23 @@ try {
         throw "Expected executable was not created: $ExePath"
     }
 
+    $UpdaterPath = Join-Path $PSScriptRoot "dist\OBD_ELM327_Updater.exe"
+    if (-not (Test-Path $UpdaterPath)) {
+        throw "Expected updater executable was not created: $UpdaterPath"
+    }
+
     $HashPath = Join-Path $PSScriptRoot "dist\OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt"
     $Hash = (Get-FileHash -Path $ExePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    "$Hash  OBD_ELM327_Engine_Diagnosis_Helper.exe" | Set-Content -Path $HashPath -Encoding ascii
+    $UpdaterHash = (Get-FileHash -Path $UpdaterPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    @(
+        "$Hash  OBD_ELM327_Engine_Diagnosis_Helper.exe"
+        "$UpdaterHash  OBD_ELM327_Updater.exe"
+    ) | Set-Content -Path $HashPath -Encoding ascii
 
     Write-Host ""
     Write-Host "Build completed:"
     Write-Host "  $ExePath"
+    Write-Host "  $UpdaterPath"
     Write-Host "  $HashPath"
     Write-Host "  settings.json will be created next to the executable at first start."
 }
