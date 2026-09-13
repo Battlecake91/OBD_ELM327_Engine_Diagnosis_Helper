@@ -65,5 +65,6 @@
   "sensor.speed": "Fahrgeschwindigkeit",
   "sensor.runtime": "Motorlaufzeit",
   "sensor.fuel_level": "Kraftstofffüllstand",
-  "sensor.ecu_voltage": "Steuergeräte-/Bordnetzspannung"
+  "sensor.ecu_voltage": "Steuergeräte-/Bordnetzspannung",
+  "easy.time": "Zeit"
 }
