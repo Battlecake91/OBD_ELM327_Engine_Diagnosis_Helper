@@ -14,7 +14,7 @@ from elm327_twingo_gui import APP_NAME, DESKTOP_FILE_ID, ORGANIZATION_NAME, SENS
 from opel_kwp2000 import OpelKwpMixin
 from guided_mode import GuidedModeController
 from updater_ui import install_update_menu
-APP_VERSION = '3.1.0'
+APP_VERSION = '3.2.0'
 MAC_RE = re.compile('(?:[0-9A-F]{2}:){5}[0-9A-F]{2}')
 
 def stage_dict(stage: TestStage) -> dict:
