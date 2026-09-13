@@ -69,5 +69,6 @@
   "easy.time": "Time",
   "easy.clear_title": "Clear fault memory",
   "easy.clear_confirm": "Really clear the fault memory? Depending on the vehicle this can also reset freeze-frame and readiness information.",
-  "easy.reading_dtcs": "Reading fault memory …"
+  "easy.reading_dtcs": "Reading fault memory …",
+  "detect.response_unusable": "{protocol}: response received, but no usable OBD-II 41 00 reply ({answer})"
 }
