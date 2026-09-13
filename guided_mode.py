@@ -361,8 +361,8 @@ class GuidedModeController:
             button.setMaximumHeight(28)
         self.easy_button.clicked.connect(lambda: self.set_mode("easy"))
         self.expert_button.clicked.connect(lambda: self.set_mode("expert"))
-        layout.addWidget(self.easy_button)
         layout.addWidget(self.expert_button)
+        layout.addWidget(self.easy_button)
         self.window.centralWidget().layout().insertWidget(0, frame)
         self.mode_bar = frame
 
@@ -667,5 +667,10 @@ class GuidedModeController:
             return
         if not filename.lower().endswith(".png"):
             filename += ".png"
-        if not self.easy_live_tab.grab().save(filename, "PNG"):
-            QMessageBox.warning(self.window, self.tr.get("common.export", "Export"), self.tr.get("easy.export_failed", "The image could not be saved."))
+        target = self.easy_plot_content if self.easy_plot_curves else self.easy_live_tab
+        if not target.grab().save(filename, "PNG"):
+            QMessageBox.warning(
+                self.window,
+                self.tr.get("common.export", "Export"),
+                self.tr.get("easy.export_failed", "The image could not be saved."),
+            )
