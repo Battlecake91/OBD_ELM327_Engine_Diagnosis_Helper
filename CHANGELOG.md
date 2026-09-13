@@ -1,12 +1,22 @@
 # Changelog
 
-## Unreleased
+## 3.2.0
 
+- Integrated the verified Opel Astra G X16XEL / Multec-H KWP2000 Fast-Init profile into the normal application architecture.
+- Added verified X16XEL ECU identification, live-data decoding, DTC reading and DTC clearing.
+- Added a bilingual repository-backed DTC database and JSON vehicle/live-data presets.
+- Added an Easy/Expert mode switch inspired by compact slicer-style mode selectors.
+- Added a startup choice between the guided assistant and Expert mode.
+- Added a guided connection wizard with adapter selection, vehicle/interface profiles and visible automatic protocol detection.
+- Added Windows/Linux Bluetooth-ELM327 setup guidance to the wizard.
+- Added simplified Easy fault-memory and live-data tabs with preset-driven live plots, CSV export and PNG export.
+- Added portable GitHub-release self-update infrastructure based on a separate updater process.
+- Added Linux x86_64 PyInstaller builds and release ZIPs alongside Windows releases.
+- Bundled diagnostic JSON data and German/English locale files into packaged applications.
 - Added a reproducible PyInstaller build for a standalone Windows x64 executable.
 - Added embedded Windows icon and version metadata.
-- Added a GitHub Actions workflow that tests and builds the executable on Windows.
-- Added automatic GitHub release creation with executable and SHA-256 checksum assets.
-- Kept persistent application settings outside the executable through Qt's native settings backend.
+- Added automatic GitHub release creation with SHA-256 checksum assets.
+- Kept persistent application settings outside the executable through the portable JSON settings backend.
 
 ## 3.1.0
 
