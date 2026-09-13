@@ -8,8 +8,10 @@ from typing import Any
 import numpy as np
 import pyqtgraph as pg
 
-from PySide6.QtCore import QThread, QTimer, Qt, Signal
+from PySide6.QtCore import QThread, QTimer, Qt, Signal, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -17,6 +19,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QGridLayout,
+    QGroupBox,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -24,6 +27,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QScrollArea,
     QSizePolicy,
+    QSpinBox,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -145,8 +149,63 @@ class AutoDetectWorker(QThread):
             elm.close()
 
 
+class AdapterTypePage(QWizardPage):
+    """Choose the physical ELM327 connection method before port setup."""
+
+    def __init__(self, tr: dict[str, str], parent=None):
+        super().__init__(parent)
+        self.tr = tr
+        self.setTitle(tr.get("wizard.adapter_type_title", "ELM327 connection"))
+        layout = QVBoxLayout(self)
+
+        intro = QLabel(
+            tr.get(
+                "wizard.adapter_type_intro",
+                "How is the ELM327 connected to this computer?",
+            )
+        )
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        self.group = QButtonGroup(self)
+        self.group.setExclusive(True)
+
+        self.usb_button = QPushButton(tr.get("wizard.adapter_usb", "ELM327 USB"))
+        self.bluetooth_button = QPushButton(
+            tr.get("wizard.adapter_bluetooth", "ELM327 Bluetooth")
+        )
+        for button in (self.usb_button, self.bluetooth_button):
+            button.setCheckable(True)
+            button.setMinimumHeight(64)
+            button.setSizePolicy(
+                QSizePolicy.Policy.Expanding,
+                QSizePolicy.Policy.Fixed,
+            )
+            self.group.addButton(button)
+
+        self.group.setId(self.usb_button, 1)
+        self.group.setId(self.bluetooth_button, 2)
+        self.usb_button.clicked.connect(self.completeChanged.emit)
+        self.bluetooth_button.clicked.connect(self.completeChanged.emit)
+
+        layout.addWidget(self.usb_button)
+        layout.addWidget(self.bluetooth_button)
+        layout.addStretch(1)
+
+    def adapter_kind(self) -> str:
+        checked = self.group.checkedId()
+        if checked == 1:
+            return "usb"
+        if checked == 2:
+            return "bluetooth"
+        return ""
+
+    def isComplete(self) -> bool:
+        return bool(self.adapter_kind())
+
+
 class AdapterWizardPage(QWizardPage):
-    """First wizard page; complete only when a real serial port is selected."""
+    """Adapter setup page; complete only when a real serial port is selected."""
 
     def __init__(self, tr: dict[str, str], parent=None):
         super().__init__(parent)
@@ -158,7 +217,7 @@ class AdapterWizardPage(QWizardPage):
 
 
 class ConnectionWizard(QWizard):
-    """Guided adapter and vehicle/interface setup."""
+    """Guided USB/Bluetooth adapter and vehicle/interface setup."""
 
     def __init__(self, window, tr: dict[str, str], parent=None):
         super().__init__(parent or window)
@@ -166,12 +225,11 @@ class ConnectionWizard(QWizard):
         self.tr = tr
         self.detector: AutoDetectWorker | None = None
         self.setWindowTitle(tr.get("wizard.title", "Guided connection"))
-        self.setMinimumSize(720, 500)
+        self.setMinimumSize(760, 560)
 
         # QWizard's native Windows "Modern" style paints a bright page even
-        # when the application/system palette is dark. That makes inherited
-        # light text effectively invisible. Keep the wizard on Qt's classic
-        # palette-aware path and scope the styling to this dialog.
+        # when the application/system palette is dark. Keep the wizard on Qt's
+        # palette-aware classic path and style only this dialog.
         self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
         self.setOption(QWizard.WizardOption.NoBackButtonOnStartPage, True)
         self.setStyleSheet(
@@ -180,11 +238,11 @@ class ConnectionWizard(QWizard):
                 background-color: palette(window);
                 color: palette(window-text);
             }
-            QWizard QLabel {
+            QWizard QLabel, QWizard QGroupBox {
                 color: palette(window-text);
                 background: transparent;
             }
-            QWizard QComboBox {
+            QWizard QComboBox, QWizard QSpinBox {
                 min-height: 30px;
                 max-height: 34px;
                 padding: 2px 8px;
@@ -197,23 +255,106 @@ class ConnectionWizard(QWizard):
                 color: palette(button-text);
                 background-color: palette(button);
             }
+            QWizard QPushButton:checked {
+                color: palette(highlighted-text);
+                background-color: palette(highlight);
+                border: 2px solid palette(highlight);
+            }
             QWizard QTextEdit {
                 color: palette(text);
                 background-color: palette(base);
                 border: 1px solid palette(mid);
             }
+            QWizard QGroupBox {
+                border: 1px solid palette(mid);
+                border-radius: 6px;
+                margin-top: 12px;
+                padding-top: 8px;
+            }
+            QWizard QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 4px;
+            }
             """
         )
+
+        self._build_adapter_type_page()
         self._build_adapter_page()
         self._build_vehicle_page()
         self._build_status_page()
         self.currentIdChanged.connect(self._page_changed)
 
+    def _build_adapter_type_page(self) -> None:
+        page = AdapterTypePage(self.tr, self)
+        self.adapter_type_page = page
+        self.adapter_type_page_id = self.addPage(page)
+
     def _build_adapter_page(self) -> None:
         page = AdapterWizardPage(self.tr, self)
-        page.setTitle(self.tr.get("wizard.adapter", "Adapter"))
+        self.adapter_page = page
+        page.setTitle(self.tr.get("wizard.adapter_setup_title", "Set up adapter"))
         layout = QVBoxLayout(page)
-        layout.addWidget(QLabel(self.tr.get("wizard.adapter_intro", "Select an ELM327 or compatible adapter.")))
+
+        self.adapter_intro = QLabel()
+        self.adapter_intro.setWordWrap(True)
+        layout.addWidget(self.adapter_intro)
+
+        self.bluetooth_group = QGroupBox(
+            self.tr.get("wizard.bluetooth_assistant", "Bluetooth assistant")
+        )
+        bt_layout = QVBoxLayout(self.bluetooth_group)
+
+        self.bluetooth_guide = QLabel()
+        self.bluetooth_guide.setWordWrap(True)
+        bt_layout.addWidget(self.bluetooth_guide)
+
+        self.windows_bt_settings_button = QPushButton(
+            self.tr.get("wizard.bt_open_settings", "Open Bluetooth settings")
+        )
+        self.windows_bt_settings_button.clicked.connect(
+            self._open_windows_bluetooth_settings
+        )
+        bt_layout.addWidget(self.windows_bt_settings_button)
+
+        self.linux_bt_device_combo = QComboBox()
+        self.linux_bt_scan_button = QPushButton(
+            self.tr.get("wizard.bt_scan", "Find paired Bluetooth devices")
+        )
+        self.linux_bt_scan_button.clicked.connect(self._scan_linux_bluetooth)
+        linux_scan_row = QHBoxLayout()
+        linux_scan_row.addWidget(self.linux_bt_device_combo, 1)
+        linux_scan_row.addWidget(self.linux_bt_scan_button)
+        self.linux_bt_scan_widget = QWidget()
+        self.linux_bt_scan_widget.setLayout(linux_scan_row)
+        bt_layout.addWidget(self.linux_bt_scan_widget)
+
+        linux_rfcomm_row = QHBoxLayout()
+        linux_rfcomm_row.addWidget(
+            QLabel(self.tr.get("wizard.bt_channel", "RFCOMM channel"))
+        )
+        self.linux_bt_channel = QSpinBox()
+        self.linux_bt_channel.setRange(1, 30)
+        self.linux_bt_channel.setValue(1)
+        linux_rfcomm_row.addWidget(self.linux_bt_channel)
+        linux_rfcomm_row.addStretch(1)
+        self.linux_bt_create_button = QPushButton(
+            self.tr.get("wizard.bt_create_rfcomm", "Create Bluetooth serial port")
+        )
+        self.linux_bt_create_button.clicked.connect(self._create_linux_rfcomm)
+        linux_rfcomm_row.addWidget(self.linux_bt_create_button)
+        self.linux_rfcomm_widget = QWidget()
+        self.linux_rfcomm_widget.setLayout(linux_rfcomm_row)
+        bt_layout.addWidget(self.linux_rfcomm_widget)
+
+        self.bluetooth_status = QLabel()
+        self.bluetooth_status.setWordWrap(True)
+        bt_layout.addWidget(self.bluetooth_status)
+        layout.addWidget(self.bluetooth_group)
+
+        port_label = QLabel(self.tr.get("wizard.serial_port", "Serial port"))
+        layout.addWidget(port_label)
+
         self.port_combo = QComboBox()
         self.port_combo.setSizePolicy(
             QSizePolicy.Policy.Expanding,
@@ -225,38 +366,224 @@ class ConnectionWizard(QWizard):
         self.port_combo.currentIndexChanged.connect(page.completeChanged.emit)
         layout.addWidget(self.port_combo)
 
-        refresh = QPushButton(self.tr.get("wizard.refresh_ports", "Refresh ports"))
-        refresh.clicked.connect(self._refresh_ports)
-        layout.addWidget(refresh)
-
-        guide = QLabel(
-            self.tr.get(
-                "wizard.bt_windows" if sys.platform.startswith("win") else "wizard.bt_linux",
-                "",
-            )
+        self.refresh_ports_button = QPushButton(
+            self.tr.get("wizard.refresh_ports", "Refresh ports")
         )
-        guide.setWordWrap(True)
-        guide.setStyleSheet("padding: 12px; border: 1px solid palette(mid); border-radius: 6px;")
-        layout.addWidget(guide)
+        self.refresh_ports_button.clicked.connect(self._refresh_ports)
+        layout.addWidget(self.refresh_ports_button)
         layout.addStretch(1)
-        self.addPage(page)
-        self._refresh_ports()
+
+        self.adapter_page_id = self.addPage(page)
+        self._configure_adapter_page()
+
+    def _adapter_kind(self) -> str:
+        return self.adapter_type_page.adapter_kind()
+
+    def _configure_adapter_page(self) -> None:
+        bluetooth = self._adapter_kind() == "bluetooth"
+        self.bluetooth_group.setVisible(bluetooth)
+
+        if bluetooth:
+            self.adapter_intro.setText(
+                self.tr.get(
+                    "wizard.bluetooth_intro",
+                    "Pair the ELM327 first, then select the serial port created for it.",
+                )
+            )
+            if sys.platform.startswith("win"):
+                self.bluetooth_guide.setText(
+                    self.tr.get(
+                        "wizard.bt_windows",
+                        "Plug the adapter into the vehicle, switch ignition on, pair it in Windows Bluetooth settings and then refresh the COM-port list.",
+                    )
+                )
+                self.windows_bt_settings_button.setVisible(True)
+                self.linux_bt_scan_widget.setVisible(False)
+                self.linux_rfcomm_widget.setVisible(False)
+            elif sys.platform == "linux":
+                self.bluetooth_guide.setText(
+                    self.tr.get(
+                        "wizard.bt_linux",
+                        "Pair the adapter first, select it below and create an RFCOMM serial port.",
+                    )
+                )
+                self.windows_bt_settings_button.setVisible(False)
+                self.linux_bt_scan_widget.setVisible(True)
+                self.linux_rfcomm_widget.setVisible(True)
+                self._populate_linux_bt_devices()
+            else:
+                self.bluetooth_guide.setText(
+                    self.tr.get(
+                        "wizard.bt_other",
+                        "Pair the adapter with the operating system, then select its serial port below.",
+                    )
+                )
+                self.windows_bt_settings_button.setVisible(False)
+                self.linux_bt_scan_widget.setVisible(False)
+                self.linux_rfcomm_widget.setVisible(False)
+        else:
+            self.adapter_intro.setText(
+                self.tr.get(
+                    "wizard.usb_intro",
+                    "Connect the USB ELM327, switch ignition on and select its serial port.",
+                )
+            )
+            self.bluetooth_status.clear()
+
+    @staticmethod
+    def _looks_like_bluetooth_port(text: str) -> bool:
+        value = text.lower()
+        return any(
+            token in value
+            for token in ("bluetooth", "rfcomm", "bthenum", "obdii", "obd-ii", "elm327")
+        )
 
     def _refresh_ports(self) -> None:
+        previous = self.port_combo.currentData()
         self.window._refresh_ports()
-        current = self.window.port_combo.currentData()
+        current = previous or self.window.port_combo.currentData()
+        self.port_combo.blockSignals(True)
         self.port_combo.clear()
         for index in range(self.window.port_combo.count()):
             self.port_combo.addItem(
                 self.window.port_combo.itemText(index),
                 self.window.port_combo.itemData(index),
             )
+
         selected = self.port_combo.findData(current)
+        if self._adapter_kind() == "bluetooth":
+            for index in range(self.port_combo.count()):
+                if self._looks_like_bluetooth_port(self.port_combo.itemText(index)):
+                    selected = index
+                    break
         if selected >= 0:
             self.port_combo.setCurrentIndex(selected)
-        page = self.page(0)
-        if isinstance(page, AdapterWizardPage):
-            page.completeChanged.emit()
+        elif self.port_combo.count():
+            self.port_combo.setCurrentIndex(0)
+        self.port_combo.blockSignals(False)
+        self.adapter_page.completeChanged.emit()
+
+    def _open_windows_bluetooth_settings(self) -> None:
+        opened = QDesktopServices.openUrl(QUrl("ms-settings:bluetooth"))
+        if not opened:
+            self.bluetooth_status.setText(
+                self.tr.get(
+                    "wizard.bt_settings_failed",
+                    "Windows Bluetooth settings could not be opened automatically.",
+                )
+            )
+
+    def _populate_linux_bt_devices(self, devices=None) -> None:
+        selected = self.linux_bt_device_combo.currentData()
+        if devices is None:
+            devices = list(getattr(self.window, "saved_bt", [])) + list(
+                getattr(self.window, "discovered_bt", [])
+            )
+        unique: dict[str, dict] = {}
+        for item in devices:
+            if not isinstance(item, dict):
+                continue
+            address = str(item.get("address") or "").upper()
+            if address:
+                unique[address] = item
+
+        self.linux_bt_device_combo.blockSignals(True)
+        self.linux_bt_device_combo.clear()
+        for address, item in sorted(
+            unique.items(), key=lambda pair: str(pair[1].get("name", ""))
+        ):
+            self.linux_bt_device_combo.addItem(
+                f"{item.get('name', 'Bluetooth device')} — {address}",
+                address,
+            )
+        index = self.linux_bt_device_combo.findData(selected)
+        if index >= 0:
+            self.linux_bt_device_combo.setCurrentIndex(index)
+        self.linux_bt_device_combo.blockSignals(False)
+
+    def _scan_linux_bluetooth(self) -> None:
+        if sys.platform != "linux":
+            return
+        self.bluetooth_status.setText(
+            self.tr.get("wizard.bt_scanning", "Searching paired Bluetooth devices …")
+        )
+        self.linux_bt_scan_button.setEnabled(False)
+        self.window._scan_bt()
+        scanner = getattr(self.window, "bt_scanner", None)
+        if scanner is None:
+            self.linux_bt_scan_button.setEnabled(True)
+            return
+        scanner.ready.connect(self._linux_bt_ready)
+        scanner.failed.connect(self._linux_bt_failed)
+        scanner.finished.connect(
+            lambda: self.linux_bt_scan_button.setEnabled(True)
+        )
+
+    def _linux_bt_ready(self, devices) -> None:
+        self._populate_linux_bt_devices(list(devices))
+        count = self.linux_bt_device_combo.count()
+        self.bluetooth_status.setText(
+            self.tr.get(
+                "wizard.bt_found",
+                "{count} paired Bluetooth device(s) found.",
+            ).format(count=count)
+        )
+
+    def _linux_bt_failed(self, message: str) -> None:
+        self.bluetooth_status.setText(message)
+
+    def _create_linux_rfcomm(self) -> None:
+        address = str(self.linux_bt_device_combo.currentData() or "")
+        if not address:
+            self.bluetooth_status.setText(
+                self.tr.get(
+                    "wizard.bt_select_device",
+                    "Select a paired Bluetooth device first.",
+                )
+            )
+            return
+
+        self.window._populate_bt(address)
+        self.window.bluetooth_channel_spin.setValue(self.linux_bt_channel.value())
+        self.window.rfcomm_device_edit.setText("/dev/rfcomm0")
+        self.bluetooth_status.setText(
+            self.tr.get(
+                "wizard.bt_creating_rfcomm",
+                "Creating /dev/rfcomm0 …",
+            )
+        )
+        self.linux_bt_create_button.setEnabled(False)
+        self.window._create_bluetooth_serial()
+        worker = getattr(self.window, "bluetooth_worker", None)
+        if worker is None:
+            self.linux_bt_create_button.setEnabled(True)
+            return
+        worker.succeeded.connect(self._linux_rfcomm_ready)
+        worker.failed.connect(self._linux_rfcomm_failed)
+        worker.finished.connect(
+            lambda: self.linux_bt_create_button.setEnabled(True)
+        )
+
+    def _linux_rfcomm_ready(self, message: str) -> None:
+        self.bluetooth_status.setText(
+            self.tr.get(
+                "wizard.bt_rfcomm_ready",
+                "Bluetooth serial port is ready: {device}",
+            ).format(device=message)
+        )
+        self._refresh_ports()
+        index = self.port_combo.findData("/dev/rfcomm0")
+        if index >= 0:
+            self.port_combo.setCurrentIndex(index)
+        self.adapter_page.completeChanged.emit()
+
+    def _linux_rfcomm_failed(self, message: str) -> None:
+        self.bluetooth_status.setText(
+            self.tr.get(
+                "wizard.bt_rfcomm_failed",
+                "Bluetooth serial setup failed: {error}",
+            ).format(error=message)
+        )
 
     def _build_vehicle_page(self) -> None:
         page = QWizardPage()
@@ -271,11 +598,16 @@ class ConnectionWizard(QWizard):
             self.vehicle_combo.addItem(str(label), str(profile.get("id")))
         layout.addWidget(self.vehicle_combo)
 
-        hint = QLabel(self.tr.get("wizard.auto_hint", "Auto detect tries standard OBD protocols and known manufacturer profiles."))
+        hint = QLabel(
+            self.tr.get(
+                "wizard.auto_hint",
+                "Auto detect tries standard OBD protocols and known manufacturer profiles.",
+            )
+        )
         hint.setWordWrap(True)
         layout.addWidget(hint)
         layout.addStretch(1)
-        self.addPage(page)
+        self.vehicle_page_id = self.addPage(page)
 
     def _build_status_page(self) -> None:
         page = QWizardPage()
@@ -287,12 +619,17 @@ class ConnectionWizard(QWizard):
         self.connect_button = QPushButton(self.tr.get("wizard.connect", "Connect"))
         self.connect_button.clicked.connect(self._start_connection)
         layout.addWidget(self.connect_button)
-        self.addPage(page)
+        self.status_page_id = self.addPage(page)
 
     def _page_changed(self, page_id: int) -> None:
-        if page_id == 2:
+        if page_id == self.adapter_page_id:
+            self._configure_adapter_page()
+            self._refresh_ports()
+        elif page_id == self.status_page_id:
             self.status_output.clear()
-            self.status_output.append(self.tr.get("wizard.ready", "Ready. Click Connect."))
+            self.status_output.append(
+                self.tr.get("wizard.ready", "Ready. Click Connect.")
+            )
 
     def _select_main_port(self) -> str:
         port = str(self.port_combo.currentData() or "")
@@ -311,7 +648,11 @@ class ConnectionWizard(QWizard):
     def _start_connection(self) -> None:
         port = self._select_main_port()
         if not port:
-            QMessageBox.warning(self, self.tr.get("wizard.adapter", "Adapter"), self.tr.get("wizard.no_port", "No serial adapter selected."))
+            QMessageBox.warning(
+                self,
+                self.tr.get("wizard.adapter", "Adapter"),
+                self.tr.get("wizard.no_port", "No serial adapter selected."),
+            )
             return
         if self.window.worker is not None and self.window.worker.isRunning():
             self.accept()
@@ -328,7 +669,9 @@ class ConnectionWizard(QWizard):
             return
 
         self.connect_button.setEnabled(False)
-        self.status_output.append(self.tr.get("wizard.auto_started", "Automatic detection started …"))
+        self.status_output.append(
+            self.tr.get("wizard.auto_started", "Automatic detection started …")
+        )
         detector = AutoDetectWorker(
             port,
             int(self.window.baud_combo.currentText()),
