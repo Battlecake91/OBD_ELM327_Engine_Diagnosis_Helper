@@ -106,6 +106,11 @@ def replace_payload(source: Path, target: Path) -> None:
         else:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, destination)
+            if os.name != "nt" and destination.name in {
+                "OBD_ELM327_Engine_Diagnosis_Helper",
+                "OBD_ELM327_Updater",
+            }:
+                destination.chmod(destination.stat().st_mode | 0o111)
 
 
 def restart(path: Path | None) -> None:
