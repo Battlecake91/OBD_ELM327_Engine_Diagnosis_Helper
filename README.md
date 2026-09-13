@@ -1,11 +1,19 @@
-# ELM327 Live Diagnostic 3.1
+# ELM327 Live Diagnostic 3.2
 
-A professional cross-platform PySide6 application for standard OBD-II live data through a serial ELM327 adapter.
+A cross-platform PySide6 diagnostic application for standard OBD-II and supported manufacturer-specific protocols through a serial ELM327-compatible adapter.
 
 The application is intended for diagnostic measurements, repeatable RPM tests and later analysis of recorded data. It does not control the engine or throttle.
 
 ## Highlights
 
+- Easy/Expert mode switch with a guided startup and connection assistant
+- Visible automatic interface detection with standard OBD-II and known vehicle profiles
+- Verified Opel Astra G X16XEL / Multec-H KWP2000 Fast-Init diagnostics
+- Repository-backed bilingual DTC database and JSON vehicle/live-data presets
+- Beginner-friendly Easy fault-memory and live-data tabs
+- Preset-driven Easy live plots with CSV and PNG export
+- Portable GitHub-release self-updater for packaged Windows and Linux builds
+- Windows x64 and Linux x86_64 release pipelines
 - Live dashboard for selected OBD-II PIDs
 - Dedicated Settings page for serial connection and PID configuration
 - Persistent, editable PID presets for lean, balanced, full and user-defined measurements
@@ -22,6 +30,19 @@ The application is intended for diagnostic measurements, repeatable RPM tests an
 - Application icon and GNOME desktop integration
 
 ## Screens and workflow
+
+### Easy and Expert modes
+
+At startup the application asks whether to open the guided Easy workflow or the complete Expert interface. A compact **Easy | Expert** switch remains visible at the top of the main window.
+
+Easy mode intentionally exposes only:
+
+- **Fault memory**: connect, read DTCs, show localized meanings and clear the fault memory after confirmation.
+- **Live data**: select a vehicle-specific measurement preset, view current values and individual plots, record a CSV session and export a PNG image.
+
+The guided connection wizard explains Bluetooth ELM327 setup and can either use a selected JSON vehicle profile or try supported interfaces automatically while showing every attempted protocol.
+
+German implementation details and the profile format are documented in [docs/EASY_MODE.md](docs/EASY_MODE.md).
 
 ### Dashboard
 
@@ -107,10 +128,13 @@ Log out and back in after changing group membership.
 
 ## Windows installation
 
-1. Run `setup_windows.bat`.
-2. Run `start_windows.bat`.
+For end users, use the portable Windows release ZIP. It contains the main application and OBD_ELM327_Updater.exe. Keep both files together so the in-app updater can replace a running installation safely. Pair Bluetooth ELM327 adapters in Windows settings and select the generated COM port in the guided assistant or Expert settings.
 
-Pair Bluetooth ELM327 adapters in Windows settings. Select the generated COM port on the application's Settings tab.
+For source/development installations, setup_windows.bat and start_windows.bat remain available. See [WINDOWS_RELEASE.md](WINDOWS_RELEASE.md) for release details.
+
+## Packaged Linux release
+
+GitHub Actions also produces a portable Linux x86_64 ZIP containing the main binary and updater. See [LINUX_RELEASE.md](LINUX_RELEASE.md).
 
 ## Linux Bluetooth serial helper
 
@@ -139,8 +163,18 @@ The adapter must already be paired and trusted. Channel 1 is common for ELM327 S
 ## Project files
 
 ```text
-elm327_app.py                 # version 3.1 entry point and persistent profile UI
-elm327_twingo_gui.py          # diagnostic and plotting core
+elm327_app.py                 # version 3.2 application entry point
+elm327_twingo_gui.py          # generic diagnostic and plotting core
+guided_mode.py                # Easy/Expert UI and guided connection wizard
+opel_kwp2000.py               # verified Opel KWP2000 transport integration
+opel_multec_profile.py        # X16XEL parsing and live-data decoding
+diagnostic_data.py            # JSON vehicle/DTC/locale loader
+update_service.py             # GitHub release update service
+updater_ui.py                 # in-app updater UI
+scripts/portable_updater.py   # standalone replacement/restart process
+data/dtc_codes.json
+data/vehicles/
+locales/
 assets/io.github.open-diagnostics.elm327-live-diagnostic.svg
 elm327-live-diagnostic.desktop.in
 requirements.txt
