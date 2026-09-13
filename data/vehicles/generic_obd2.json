@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "id": "generic_obd2",
+  "manufacturer": "generic",
+  "display_name": {
+    "de": "Generisches OBD-II",
+    "en": "Generic OBD-II"
+  },
+  "interface": {
+    "transport": "OBD-II",
+    "protocol": "Automatic",
+    "settings_token": "ATSP0"
+  },
+  "dtc": {
+    "manufacturer": "generic"
+  },
+  "supported_keys": [
+    "rpm",
+    "coolant",
+    "iat",
+    "stft1",
+    "ltft1",
+    "map",
+    "baro",
+    "load",
+    "throttle",
+    "timing",
+    "maf",
+    "o2_b1s1",
+    "speed",
+    "ecu_voltage"
+  ],
+  "live_presets": [
+    {
+      "id": "forum_basic",
+      "name": {
+        "de": "Forum - Basiswerte",
+        "en": "Forum - basic values"
+      },
+      "keys": [
+        "rpm",
+        "coolant",
+        "iat",
+        "map",
+        "ecu_voltage",
+        "throttle",
+        "load",
+        "stft1",
+        "ltft1",
+        "o2_b1s1"
+      ]
+    },
+    {
+      "id": "mixture",
+      "name": {
+        "de": "Gemisch / Lambda",
+        "en": "Mixture / oxygen sensor"
+      },
+      "keys": [
+        "rpm",
+        "stft1",
+        "ltft1",
+        "o2_b1s1",
+        "map",
+        "maf",
+        "load"
+      ]
+    },
+    {
+      "id": "temperatures",
+      "name": {
+        "de": "Temperaturen",
+        "en": "Temperatures"
+      },
+      "keys": [
+        "rpm",
+        "coolant",
+        "iat",
+        "ecu_voltage"
+      ]
+    }
+  ]
+}
