@@ -307,7 +307,7 @@ class ConnectionWizard(QWizard):
 class StartupModeDialog(QDialog):
     def __init__(self, tr: dict[str, str], parent=None):
         super().__init__(parent)
-        self.mode = "easy"
+        self.mode = "expert"
         self.setWindowTitle(tr.get("startup.title", "Choose startup mode"))
         self.setModal(True)
         self.setMinimumWidth(460)
@@ -454,7 +454,10 @@ class GuidedModeController:
 
     def _startup_choice(self) -> None:
         dialog = StartupModeDialog(self.tr, self.window)
-        dialog.exec()
+        result = dialog.exec()
+        if result != QDialog.DialogCode.Accepted:
+            self.set_mode("expert")
+            return
         self.set_mode(dialog.mode)
         if dialog.mode == "easy":
             QTimer.singleShot(150, self.show_connection_wizard)
