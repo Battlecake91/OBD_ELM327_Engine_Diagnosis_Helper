@@ -358,9 +358,9 @@ class GuidedModeController:
         setup = QPushButton(self.tr.get("easy.setup", "Set up connection"))
         setup.clicked.connect(self.show_connection_wizard)
         read = QPushButton(self.tr.get("easy.read_dtcs", "Read fault memory"))
-        read.clicked.connect(self.window._read_dtcs)
+        read.clicked.connect(self._read_dtcs)
         clear = QPushButton(self.tr.get("easy.clear_dtcs", "Clear fault memory"))
-        clear.clicked.connect(self.window._clear_dtcs)
+        clear.clicked.connect(self._clear_dtcs)
         controls.addWidget(setup)
         controls.addWidget(read)
         controls.addWidget(clear)
@@ -472,6 +472,32 @@ class GuidedModeController:
         self.window.tabs.setCurrentIndex(
             self.easy_fault_index if easy else self.expert_indices[0]
         )
+
+    def _read_dtcs(self) -> None:
+        worker = self.window._require_worker()
+        if worker is None:
+            return
+        self.easy_fault_status.setText(
+            self.tr.get("easy.reading_dtcs", "Reading fault memory …")
+        )
+        worker.request_dtcs()
+
+    def _clear_dtcs(self) -> None:
+        worker = self.window._require_worker()
+        if worker is None:
+            return
+        answer = QMessageBox.question(
+            self.window,
+            self.tr.get("easy.clear_title", "Clear fault memory"),
+            self.tr.get(
+                "easy.clear_confirm",
+                "Really clear the fault memory?",
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            worker.request_clear_dtcs()
 
     def show_connection_wizard(self) -> None:
         ConnectionWizard(self.window, self.tr, self.window).exec()
