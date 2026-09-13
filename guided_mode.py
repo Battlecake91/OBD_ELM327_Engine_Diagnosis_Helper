@@ -428,6 +428,15 @@ class GuidedModeController:
     def set_mode(self, mode: str) -> None:
         self.mode = "easy" if mode == "easy" else "expert"
         easy = self.mode == "easy"
+        if easy:
+            token = str(self.window.protocol_combo.currentData() or "")
+            expected = (
+                "opel_astra_g_x16xel_multec_h"
+                if token == OPEL_PROTOCOL_TOKEN
+                else "generic_obd2"
+            )
+            if expected != self._vehicle_profile_id:
+                self.set_vehicle_profile(expected)
         bar = self.window.tabs.tabBar()
         for index in self.expert_indices:
             bar.setTabVisible(index, not easy)
@@ -493,7 +502,7 @@ class GuidedModeController:
         self.easy_live_table.setRowCount(len(sensors))
         for row, sensor in enumerate(sensors):
             self.easy_live_rows[sensor.key] = row
-            self.easy_live_table.setItem(row, 0, QTableWidgetItem(sensor.name))
+            self.easy_live_table.setItem(row, 0, QTableWidgetItem(self.tr.get(f"sensor.{sensor.key}", sensor.name)))
             self.easy_live_table.setItem(row, 1, QTableWidgetItem("–"))
             self.easy_live_table.setItem(row, 2, QTableWidgetItem(sensor.unit))
 
