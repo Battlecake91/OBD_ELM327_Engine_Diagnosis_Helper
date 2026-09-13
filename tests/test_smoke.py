@@ -18,7 +18,7 @@ def test_main_window_starts_without_plot_capture(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
     window = MainWindow()
     try:
-        assert APP_VERSION == "3.1.0"
+        assert APP_VERSION == "3.2.0"
         assert window.capture_active is False
         assert window.csv_writer is None
         assert window.tabs.count() == 8
