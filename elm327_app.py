@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QHeaderView,
 from elm327_twingo_gui import APP_NAME, DESKTOP_FILE_ID, ORGANIZATION_NAME, SENSORS, MainWindow as BaseWindow, TestStage
 from opel_kwp2000 import OpelKwpMixin
 from guided_mode import GuidedModeController
+from updater_ui import install_update_menu
 APP_VERSION = '3.1.0'
 MAC_RE = re.compile('(?:[0-9A-F]{2}:){5}[0-9A-F]{2}')
 
@@ -84,6 +85,7 @@ class MainWindow(OpelKwpMixin, BaseWindow):
         self._connect_extra()
         self._save_settings()
         self.guided_mode = GuidedModeController(self)
+        install_update_menu(self, APP_VERSION)
 
     @staticmethod
     def _json(settings: QSettings, key: str, fallback):
