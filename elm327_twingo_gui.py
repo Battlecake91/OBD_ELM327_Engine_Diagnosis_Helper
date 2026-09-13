@@ -695,8 +695,11 @@ class OBDWorker(QThread):
                     response = self.elm.clear_dtcs()
                     self.raw_log.emit(f"> 04\n{response.strip()}")
                     self.status.emit(
-                        "Clear command sent. Do not switch off the ignition."
+                        "Clear command sent. Verifying fault memory…"
                     )
+                    self.stop_event.wait(0.25)
+                    if not self.stop_event.is_set():
+                        self.dtcs_ready.emit(self.elm.read_dtcs())
                 elif request == "mode06":
                     self.mode06_ready.emit(self.elm.read_mode06_raw())
                 elif request == "custom" and payload:
