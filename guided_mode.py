@@ -44,14 +44,18 @@ class AutoDetectWorker(QThread):
     """Conservative interface detection used by the guided connection wizard."""
 
     status = Signal(str)
-    detected = Signal(str, str)
+    detected = Signal(str, str, str)
     failed = Signal(str)
 
-    def __init__(self, port: str, baudrate: int, timeout: float = 2.0, parent=None):
+    def __init__(self, port: str, baudrate: int, timeout: float = 2.0, tr: dict[str, str] | None = None, parent=None):
         super().__init__(parent)
         self.port = port
         self.baudrate = baudrate
         self.timeout = timeout
+        self.tr = tr or translations()
+
+    def _text(self, key: str, fallback: str, **values) -> str:
+        return self.tr.get(key, fallback).format(**values)
 
     @staticmethod
     def _has_standard_obd_reply(raw: str) -> bool:
@@ -70,17 +74,17 @@ class AutoDetectWorker(QThread):
             protocol_command="ATSP0",
         )
         try:
-            self.status.emit(f"Adapter öffnen: {self.port} @ {self.baudrate} baud")
+            self.status.emit(self._text("detect.open", "Opening adapter: {port} @ {baud} baud", port=self.port, baud=self.baudrate))
             elm.open()
 
             for command in ("ATZ", "ATE0", "ATL0", "ATS1", "ATH1", "ATM0"):
                 if self.isInterruptionRequested():
                     return
-                self.status.emit(f"Adapter initialisieren: {command}")
+                self.status.emit(self._text("detect.init", "Initializing adapter: {command}", command=command))
                 elm.command(command, 3.5 if command == "ATZ" else 1.0)
 
             generic_attempts = [
-                ("ATSP0", "OBD-II automatisch"),
+                ("ATSP0", "OBD-II automatic"),
                 ("ATSP3", "ISO 9141-2"),
                 ("ATSP4", "ISO 14230 KWP Slow Init"),
                 ("ATSP5", "ISO 14230 KWP Fast Init"),
@@ -89,34 +93,31 @@ class AutoDetectWorker(QThread):
             for protocol, label in generic_attempts:
                 if self.isInterruptionRequested():
                     return
-                self.status.emit(f"Probiere {label} …")
+                self.status.emit(self._text("detect.try", "Trying {protocol} …", protocol=label))
                 try:
                     elm.command("ATPC", 1.0)
                     elm.command(protocol, 1.0)
                     raw = elm.command("0100", 8.0 if protocol == "ATSP0" else 4.0)
                     if self._has_standard_obd_reply(raw):
-                        self.detected.emit(protocol, f"Standard OBD-II erkannt ({label})")
+                        self.detected.emit(protocol, "generic_obd2", self._text("detect.generic_found", "Standard OBD-II detected ({protocol})", protocol=label))
                         return
                 except Exception as exc:
-                    self.status.emit(f"{label}: keine verwertbare Antwort ({exc})")
+                    self.status.emit(self._text("detect.no_reply", "{protocol}: no usable response ({error})", protocol=label, error=exc))
 
             if self.isInterruptionRequested():
                 return
-            self.status.emit("Probiere Opel X16XEL / Multec-H KWP2000 Fast Init …")
+            self.status.emit(self._text("detect.opel_try", "Trying Opel X16XEL / Multec-H KWP2000 Fast Init …"))
             try:
                 elm.command("ATPC", 1.0)
                 initialize_opel_adapter(elm, lambda text: self.status.emit(text.splitlines()[0]))
                 success, _report = probe_opel_engine(elm, lambda text: self.status.emit(text.splitlines()[0]), targets=(0x11,))
                 if success:
-                    self.detected.emit(OPEL_PROTOCOL_TOKEN, "Opel X16XEL / Multec-H erkannt")
+                    self.detected.emit(OPEL_PROTOCOL_TOKEN, "opel_astra_g_x16xel_multec_h", self._text("detect.opel_found", "Opel X16XEL / Multec-H detected"))
                     return
             except Exception as exc:
-                self.status.emit(f"Opel-Profil: keine verwertbare Antwort ({exc})")
+                self.status.emit(self._text("detect.opel_no_reply", "Opel profile: no usable response ({error})", error=exc))
 
-            self.failed.emit(
-                "Kein unterstütztes Steuergerät wurde automatisch erkannt. "
-                "Im Expertenmodus können Protokoll und herstellerspezifische Einstellungen manuell gewählt werden."
-            )
+            self.failed.emit(self._text("detect.failed", "No supported control unit was detected automatically."))
         except Exception as exc:
             self.failed.emit(str(exc))
         finally:
@@ -142,13 +143,11 @@ class ConnectionWizard(QWizard):
         page = QWizardPage()
         page.setTitle(self.tr.get("wizard.adapter", "Adapter"))
         layout = QVBoxLayout(page)
-        layout.addWidget(QLabel(
-            "ELM327 / kompatiblen Adapter auswählen. Bei Bluetooth muss zuerst ein serieller COM-/RFCOMM-Port vorhanden sein."
-        ))
+        layout.addWidget(QLabel(self.tr.get("wizard.adapter_intro", "Select an ELM327 or compatible adapter.")))
         self.port_combo = QComboBox()
         layout.addWidget(self.port_combo)
 
-        refresh = QPushButton("Ports aktualisieren")
+        refresh = QPushButton(self.tr.get("wizard.refresh_ports", "Refresh ports"))
         refresh.clicked.connect(self._refresh_ports)
         layout.addWidget(refresh)
 
@@ -189,13 +188,9 @@ class ConnectionWizard(QWizard):
             name = profile.get("display_name", {})
             label = name.get(lang) or name.get("en") or profile.get("id")
             self.vehicle_combo.addItem(str(label), str(profile.get("id")))
-        self.vehicle_combo.addItem("Generic OBD-II", "__generic__")
         layout.addWidget(self.vehicle_combo)
 
-        hint = QLabel(
-            "Automatisch versucht nacheinander Standard-OBD-Protokolle und bekannte herstellerspezifische Profile. "
-            "Jeder Versuch wird im nächsten Schritt angezeigt."
-        )
+        hint = QLabel(self.tr.get("wizard.auto_hint", "Auto detect tries standard OBD protocols and known manufacturer profiles."))
         hint.setWordWrap(True)
         layout.addWidget(hint)
         layout.addStretch(1)
@@ -216,7 +211,7 @@ class ConnectionWizard(QWizard):
     def _page_changed(self, page_id: int) -> None:
         if page_id == 2:
             self.status_output.clear()
-            self.status_output.append("Bereit. Auf Verbinden klicken.")
+            self.status_output.append(self.tr.get("wizard.ready", "Ready. Click Connect."))
 
     def _select_main_port(self) -> str:
         port = str(self.port_combo.currentData() or "")
@@ -235,33 +230,29 @@ class ConnectionWizard(QWizard):
     def _start_connection(self) -> None:
         port = self._select_main_port()
         if not port:
-            QMessageBox.warning(self, "Adapter", "Kein serieller Adapter ausgewählt.")
+            QMessageBox.warning(self, self.tr.get("wizard.adapter", "Adapter"), self.tr.get("wizard.no_port", "No serial adapter selected."))
             return
         if self.window.worker is not None and self.window.worker.isRunning():
             self.accept()
             return
 
         selection = str(self.vehicle_combo.currentData())
-        if selection == "__generic__":
-            self._select_protocol("ATSP0")
-            self.window._toggle_connection()
-            self.accept()
-            return
-
         if selection != "__auto__":
             profile = vehicle_profile(selection)
             token = str(profile.get("interface", {}).get("settings_token") or "ATSP0")
+            self.window.guided_mode.set_vehicle_profile(selection)
             self._select_protocol(token)
             self.window._toggle_connection()
             self.accept()
             return
 
         self.connect_button.setEnabled(False)
-        self.status_output.append("Automatische Erkennung gestartet …")
+        self.status_output.append(self.tr.get("wizard.auto_started", "Automatic detection started …"))
         detector = AutoDetectWorker(
             port,
             int(self.window.baud_combo.currentText()),
             float(self.window.command_timeout_spin.value()),
+            self.tr,
             self,
         )
         self.detector = detector
@@ -271,8 +262,9 @@ class ConnectionWizard(QWizard):
         detector.finished.connect(self._detector_finished)
         detector.start()
 
-    def _auto_detected(self, token: str, message: str) -> None:
+    def _auto_detected(self, token: str, profile_id: str, message: str) -> None:
         self.status_output.append("✓ " + message)
+        self.window.guided_mode.set_vehicle_profile(profile_id)
         self._select_protocol(token)
         QTimer.singleShot(100, self.window._toggle_connection)
         QTimer.singleShot(250, self.accept)
@@ -328,7 +320,8 @@ class GuidedModeController:
         self.expert_indices = list(range(window.tabs.count()))
         self.easy_dtc_rows: dict[str, int] = {}
         self.easy_live_rows: dict[str, int] = {}
-        self._vehicle_profile = vehicle_profile("opel_astra_g_x16xel_multec_h")
+        self._vehicle_profile_id = "generic_obd2"
+        self._vehicle_profile = vehicle_profile(self._vehicle_profile_id)
         self._build_mode_bar()
         self._build_easy_tabs()
         self.set_mode("expert")
@@ -396,7 +389,7 @@ class GuidedModeController:
         live_layout.addLayout(row)
 
         self.easy_live_table = QTableWidget(0, 3)
-        self.easy_live_table.setHorizontalHeaderLabels(["Messwert", "Wert", "Einheit"])
+        self.easy_live_table.setHorizontalHeaderLabels([self.tr.get("easy.measurement", "Measurement"), self.tr.get("easy.value", "Value"), self.tr.get("easy.unit", "Unit")])
         self.easy_live_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         for column in (1, 2):
             self.easy_live_table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
@@ -455,13 +448,24 @@ class GuidedModeController:
     def show_connection_wizard(self) -> None:
         ConnectionWizard(self.window, self.tr, self.window).exec()
 
+    def set_vehicle_profile(self, profile_id: str) -> None:
+        """Activate the JSON profile selected or detected by the connection wizard."""
+        self._vehicle_profile_id = profile_id
+        self._vehicle_profile = vehicle_profile(profile_id)
+        self._populate_presets()
+        self._apply_preset()
+
     def _populate_presets(self) -> None:
+        self.preset_combo.blockSignals(True)
         self.preset_combo.clear()
         lang = language_code()
         for preset in self._vehicle_profile.get("live_presets", []):
             name = preset.get("name", {})
             label = name.get(lang) or name.get("en") or preset.get("id")
             self.preset_combo.addItem(str(label), list(preset.get("keys", [])))
+        self.preset_combo.blockSignals(False)
+        if self.preset_combo.count():
+            self.preset_combo.setCurrentIndex(0)
 
     def _apply_preset(self) -> None:
         keys = set(self.preset_combo.currentData() or [])
@@ -509,7 +513,7 @@ class GuidedModeController:
     def show_dtcs(self, dtcs: Any) -> None:
         records = list(dtcs)
         self.easy_dtc_table.setRowCount(len(records))
-        manufacturer = "opel" if getattr(self.window, "kw82_probe_active", False) else "generic"
+        manufacturer = str(self._vehicle_profile.get("manufacturer") or "generic")
         lang = language_code()
         for row, item in enumerate(records):
             code = str(getattr(item, "code", item))
@@ -520,7 +524,7 @@ class GuidedModeController:
             self.easy_dtc_table.setItem(row, 0, QTableWidgetItem(code))
             self.easy_dtc_table.setItem(row, 1, QTableWidgetItem(description or "–"))
         self.easy_fault_status.setText(
-            f"{len(records)} Fehler gespeichert." if records else self.tr.get("easy.no_dtcs", "No stored faults.")
+            self.tr.get("easy.dtc_count", "{count} stored fault(s).").format(count=len(records)) if records else self.tr.get("easy.no_dtcs", "No stored faults.")
         )
 
     def _toggle_capture(self) -> None:
@@ -546,4 +550,4 @@ class GuidedModeController:
         if not filename.lower().endswith(".png"):
             filename += ".png"
         if not self.easy_live_tab.grab().save(filename, "PNG"):
-            QMessageBox.warning(self.window, "Export", "Bild konnte nicht gespeichert werden.")
+            QMessageBox.warning(self.window, self.tr.get("common.export", "Export"), self.tr.get("easy.export_failed", "The image could not be saved."))
