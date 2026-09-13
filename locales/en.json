@@ -66,5 +66,8 @@
   "sensor.runtime": "Engine runtime",
   "sensor.fuel_level": "Fuel level",
   "sensor.ecu_voltage": "Control module voltage",
-  "easy.time": "Time"
+  "easy.time": "Time",
+  "easy.clear_title": "Clear fault memory",
+  "easy.clear_confirm": "Really clear the fault memory? Depending on the vehicle this can also reset freeze-frame and readiness information.",
+  "easy.reading_dtcs": "Reading fault memory …"
 }
