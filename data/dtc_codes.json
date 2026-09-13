@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "manufacturers": {
+    "generic": {
+      "name": "Generic OBD-II",
+      "codes": {}
+    },
+    "opel": {
+      "name": "Opel / Vauxhall",
+      "codes": {
+        "P0105": {
+          "de": "Saugrohrdrucksensor (MAP): Signalfehler",
+          "en": "Manifold absolute pressure (MAP) sensor signal fault"
+        },
+        "P0110": {
+          "de": "Ansauglufttemperatursensor: Stromkreisfehler",
+          "en": "Intake air temperature sensor circuit fault"
+        },
+        "P0115": {
+          "de": "Kühlmitteltemperatursensor: Stromkreisfehler",
+          "en": "Engine coolant temperature sensor circuit fault"
+        },
+        "P0120": {
+          "de": "Drosselklappenpotentiometer: Stromkreisfehler",
+          "en": "Throttle position sensor circuit fault"
+        },
+        "P0130": {
+          "de": "Lambdasonde: Stromkreisfehler",
+          "en": "Oxygen sensor circuit fault"
+        },
+        "P0135": {
+          "de": "Lambdasondenheizung: Stromkreisfehler",
+          "en": "Oxygen sensor heater circuit fault"
+        },
+        "P0170": {
+          "de": "Gemischregelung außerhalb des Regelbereichs",
+          "en": "Fuel trim malfunction / mixture adaptation out of range"
+        },
+        "P0200": {
+          "de": "Einspritzventile: Stromkreisfehler",
+          "en": "Injector circuit malfunction"
+        },
+        "P0230": {
+          "de": "Kraftstoffpumpenrelais: Primärstromkreisfehler",
+          "en": "Fuel pump relay primary circuit fault"
+        },
+        "P0325": {
+          "de": "Klopfsensor: Stromkreis-/Signalfehler",
+          "en": "Knock sensor circuit fault"
+        },
+        "P0335": {
+          "de": "Kurbelwellensensor / Motordrehzahlsignal fehlerhaft",
+          "en": "Crankshaft position / engine speed signal fault"
+        },
+        "P0340": {
+          "de": "Nockenwellensensor: Stromkreisfehler",
+          "en": "Camshaft position sensor circuit fault"
+        },
+        "P0351": {
+          "de": "Zündspule Zylinder 1 und 4: Stromkreisfehler",
+          "en": "Ignition coil circuit, cylinders 1 and 4"
+        },
+        "P0352": {
+          "de": "Zündspule Zylinder 2 und 3: Stromkreisfehler",
+          "en": "Ignition coil circuit, cylinders 2 and 3"
+        },
+        "P0400": {
+          "de": "AGR/EGR-System: Durchfluss- oder Funktionsfehler",
+          "en": "EGR system flow/function fault"
+        },
+        "P0443": {
+          "de": "Tankentlüftungsventil: Stromkreisfehler",
+          "en": "EVAP purge valve circuit fault"
+        },
+        "P0480": {
+          "de": "Kühlerlüfter: Relais-/Steuerkreisfehler niedrige Stufe",
+          "en": "Cooling fan relay/control circuit fault, low stage"
+        },
+        "P0481": {
+          "de": "Kühlerlüfter: Relais-/Steuerkreisfehler hohe Stufe",
+          "en": "Cooling fan relay/control circuit fault, high stage"
+        },
+        "P0500": {
+          "de": "Fahrgeschwindigkeitssignal fehlerhaft",
+          "en": "Vehicle speed signal fault"
+        },
+        "P0505": {
+          "de": "Leerlaufregelung / Leerlaufsteller fehlerhaft",
+          "en": "Idle speed control / idle air control fault"
+        },
+        "P0530": {
+          "de": "Klimaanlagen-Drucksensor: Stromkreisfehler",
+          "en": "A/C refrigerant pressure sensor circuit fault"
+        },
+        "P0560": {
+          "de": "Bordnetz-/Systemspannung fehlerhaft",
+          "en": "System voltage malfunction"
+        },
+        "P0602": {
+          "de": "Motorsteuergerät: Programmierungs-/Konfigurationsfehler",
+          "en": "Control module programming/configuration fault"
+        },
+        "P0650": {
+          "de": "Motorkontrollleuchte (MIL): Steuerkreisfehler",
+          "en": "Malfunction indicator lamp (MIL) control circuit fault"
+        },
+        "P0660": {
+          "de": "Kühlmittel-Warnausgang: Steuerkreisfehler",
+          "en": "Coolant warning output/control circuit fault"
+        },
+        "P1231": {
+          "de": "Kraftstoffpumpenrelais / Kontakt fehlerhaft",
+          "en": "Fuel pump relay/contact fault"
+        },
+        "P1405": {
+          "de": "AGR/EGR-Ventil: Positions-/Steuerfehler",
+          "en": "EGR valve position/control fault"
+        },
+        "P1484": {
+          "de": "Kühlerlüfterrelais / Lüftersteuerung fehlerhaft",
+          "en": "Cooling fan relay/control fault"
+        },
+        "P1530": {
+          "de": "Klimakompressorrelais / Steuerkreis fehlerhaft",
+          "en": "A/C compressor relay/control circuit fault"
+        },
+        "P1540": {
+          "de": "Klimaanlagen-Drucksignal fehlerhaft",
+          "en": "A/C pressure signal fault"
+        },
+        "P1604": {
+          "de": "Motorsteuergerät: interner Fehler",
+          "en": "Engine control module internal fault"
+        },
+        "P1605": {
+          "de": "Motorsteuergerät: Programmierungs-/interner Fehler",
+          "en": "Engine control module programming/internal fault"
+        },
+        "P1610": {
+          "de": "Wegfahrsperre nicht programmiert / fehlerhaft",
+          "en": "Immobilizer not programmed / immobilizer fault"
+        },
+        "P1611": {
+          "de": "Wegfahrsperre: falscher Sicherheitscode",
+          "en": "Incorrect immobilizer/security code"
+        },
+        "P1612": {
+          "de": "Wegfahrsperre: Signal fehlt oder ist fehlerhaft",
+          "en": "Immobilizer signal missing or incorrect"
+        },
+        "P1613": {
+          "de": "Wegfahrsperre: Signal fehlt oder ist fehlerhaft",
+          "en": "Immobilizer signal missing or incorrect"
+        },
+        "P1614": {
+          "de": "Wegfahrsperre: falscher Transponder/Schlüssel",
+          "en": "Incorrect immobilizer transponder/key"
+        },
+        "P1622": {
+          "de": "Kraftstoffpumpenrelais / Kontakt fehlerhaft",
+          "en": "Fuel pump relay/contact fault"
+        },
+        "P1640": {
+          "de": "Vierfach-Treibermodul (Quad Driver): Ausgangsfehler",
+          "en": "Quad driver module / output driver fault"
+        },
+        "P1813": {
+          "de": "Drehmomentregelung Automatikgetriebe: Signal fehlerhaft",
+          "en": "Torque control signal incorrect (automatic transmission)"
+        }
+      }
+    }
+  }
+}
