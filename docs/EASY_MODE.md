@@ -13,33 +13,51 @@ Oben im Hauptfenster bleibt dauerhaft eine kompakte Umschaltung **Expert | Easy*
 
 ## Geführte Verbindung
 
-Der Verbindungsassistent arbeitet in drei Schritten:
+Der Verbindungsassistent trennt zuerst bewusst zwischen:
 
-1. Adapter bzw. seriellen Port auswählen.
-2. Fahrzeug-/Schnittstellenprofil auswählen oder **Automatisch erkennen** verwenden.
-3. Verbindungs- und Erkennungsstatus beobachten.
+- **ELM327 USB**
+- **ELM327 Bluetooth**
+
+Danach folgt die zur Verbindung passende Einrichtung. Erst wenn ein echter serieller Port vorhanden ist, geht es weiter zur Fahrzeug-/Schnittstellenauswahl.
+
+Anschließend:
+
+1. Fahrzeug-/Schnittstellenprofil auswählen oder **Automatisch erkennen** verwenden.
+2. Verbindungs- und Erkennungsstatus beobachten.
 
 Bei automatischer Erkennung werden derzeit nacheinander Standard-OBD-II-Protokolle und anschließend bekannte herstellerspezifische Profile getestet. Jeder Versuch wird im Statusfenster angezeigt.
 
 Für den verifizierten Opel Astra G X16XEL/Multec-H wird nach den Standardversuchen die bekannte KWP2000-Fast-Init-Verbindung auf K-Line geprüft.
 
-## Bluetooth-ELM327
+## ELM327 USB
 
-Der Assistent zeigt abhängig vom Betriebssystem eine Kurzanleitung.
+1. ELM327 mit USB verbinden.
+2. Adapter am Fahrzeug einstecken und Zündung einschalten.
+3. Seriellen COM-/tty-Port auswählen.
+4. Falls der Port noch nicht sichtbar ist, **Ports aktualisieren** verwenden.
+
+## ELM327 Bluetooth
 
 ### Windows
 
-1. ELM327 am Fahrzeug einstecken.
-2. Zündung einschalten.
-3. Adapter in **Bluetooth & Geräte** koppeln.
-4. Bei einfachen SPP-Adaptern werden häufig PIN **1234** oder **0000** verwendet.
-5. Den von Windows erzeugten COM-Port im Assistenten auswählen.
+1. ELM327 am Fahrzeug einstecken und Zündung einschalten.
+2. Im Assistenten **Windows-Bluetooth-Einstellungen öffnen** wählen.
+3. ELM327 koppeln. Bei einfachen Bluetooth-SPP-Adaptern werden häufig PIN **1234** oder **0000** verwendet.
+4. Zum Assistenten zurückkehren und **Ports aktualisieren** verwenden.
+5. Den von Windows erzeugten Bluetooth-COM-Port auswählen. Falls Windows mehrere Bluetooth-COM-Ports erzeugt, ist normalerweise der ausgehende serielle Port relevant.
+
+Windows stellt klassische Bluetooth-SPP-Verbindungen als COM-Port bereit. Die Diagnoseanwendung übernimmt deshalb nicht selbst das Betriebssystem-Pairing, sondern führt den Benutzer gezielt durch den Pairing-Schritt und übernimmt danach den erzeugten seriellen Port.
 
 ### Linux
 
 1. ELM327 am Fahrzeug einstecken und Zündung einschalten.
 2. Adapter über die Desktop-Bluetooth-Einstellungen oder bluetoothctl koppeln.
-3. Danach kann ein RFCOMM-Port verwendet bzw. von der vorhandenen Linux-Hilfe angelegt werden.
+3. Im Assistenten **Gekoppelte Bluetooth-Geräte suchen** verwenden.
+4. ELM327 auswählen.
+5. RFCOMM-Kanal wählen; Kanal 1 ist bei vielen einfachen ELM327-SPP-Adaptern üblich.
+6. **Bluetooth-Seriell-Port erstellen** wählen.
+
+Der Assistent verwendet dabei den bereits vorhandenen BlueZ-/RFCOMM-Unterbau und legt standardmäßig /dev/rfcomm0 an. Anschließend wird dieser Port automatisch in die Portauswahl übernommen.
 
 ## Easy-Modus
 
