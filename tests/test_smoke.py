@@ -5,9 +5,11 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWizard
 
 from elm327_app import APP_VERSION, BluetoothScanner, MainWindow, stage_dict, stage_value
+from diagnostic_data import translations
+from guided_mode import AdapterWizardPage, ConnectionWizard
 from elm327_twingo_gui import TestStage
 
 
@@ -96,3 +98,22 @@ def test_application_icon_is_packaged():
         "io.github.open-diagnostics.elm327-live-diagnostic.svg"
     )
     assert icon.is_file()
+
+
+def test_guided_connection_wizard_uses_palette_aware_classic_style(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    window = MainWindow()
+    wizard = ConnectionWizard(window, translations("en"), window)
+    try:
+        assert wizard.wizardStyle() == QWizard.WizardStyle.ClassicStyle
+        assert "background-color: palette(window)" in wizard.styleSheet()
+        assert wizard.port_combo.minimumHeight() == 30
+        assert wizard.port_combo.maximumHeight() == 34
+
+        first_page = wizard.page(0)
+        assert isinstance(first_page, AdapterWizardPage)
+        if not wizard.port_combo.currentData():
+            assert first_page.isComplete() is False
+    finally:
+        wizard.close()
+        window.close()
