@@ -70,5 +70,20 @@
   "easy.clear_title": "Clear fault memory",
   "easy.clear_confirm": "Really clear the fault memory? Depending on the vehicle this can also reset freeze-frame and readiness information.",
   "easy.reading_dtcs": "Reading fault memory …",
-  "detect.response_unusable": "{protocol}: response received, but no usable OBD-II 41 00 reply ({answer})"
+  "detect.response_unusable": "{protocol}: response received, but no usable OBD-II 41 00 reply ({answer})",
+  "menu.help": "Help",
+  "update.check": "Check for updates …",
+  "update.title": "Updater",
+  "update.packaged_only": "Self-update is only active in a packaged release. A source checkout is never overwritten.",
+  "update.check_failed": "Update check failed",
+  "update.none_title": "No update",
+  "update.none": "Installed version: {current}\\nLatest release: {latest}",
+  "update.available_title": "Update available",
+  "update.available": "Version {latest} is available.\\n\\nFile: {asset}\\n\\nDownload and install now? The application will restart.",
+  "update.downloading": "Downloading update …",
+  "update.cancel": "Cancel",
+  "update.progress_title": "Update ELM327 Diagnosis Helper",
+  "update.cancelled": "Update was cancelled.",
+  "update.starting": "Starting updater …",
+  "update.failed": "Update failed"
 }
