@@ -440,8 +440,10 @@ class ConnectionWizard(QWizard):
 
     def _refresh_ports(self) -> None:
         previous = self.port_combo.currentData()
+        bluetooth = self._adapter_kind() == "bluetooth"
         self.window._refresh_ports()
-        current = previous or self.window.port_combo.currentData()
+        current = previous if bluetooth else (previous or self.window.port_combo.currentData())
+
         self.port_combo.blockSignals(True)
         self.port_combo.clear()
         for index in range(self.window.port_combo.count()):
@@ -450,16 +452,20 @@ class ConnectionWizard(QWizard):
                 self.window.port_combo.itemData(index),
             )
 
-        selected = self.port_combo.findData(current)
-        if self._adapter_kind() == "bluetooth":
+        selected = self.port_combo.findData(current) if current else -1
+        if bluetooth and selected < 0:
             for index in range(self.port_combo.count()):
                 if self._looks_like_bluetooth_port(self.port_combo.itemText(index)):
                     selected = index
                     break
+
         if selected >= 0:
             self.port_combo.setCurrentIndex(selected)
+        elif bluetooth:
+            self.port_combo.setCurrentIndex(-1)
         elif self.port_combo.count():
             self.port_combo.setCurrentIndex(0)
+
         self.port_combo.blockSignals(False)
         self.adapter_page.completeChanged.emit()
 
