@@ -543,7 +543,7 @@ class GuidedModeController:
             plot.setMinimumHeight(190)
             plot.setTitle(self.tr.get(f"sensor.{sensor.key}", sensor.name))
             plot.setLabel("left", sensor.unit)
-            plot.setLabel("bottom", "Time", units="s")
+            plot.setLabel("bottom", self.tr.get("easy.time", "Time"), units="s")
             plot.showGrid(x=True, y=True, alpha=0.25)
             plot.setDownsampling(auto=True, mode="peak")
             plot.setClipToView(True)
