@@ -5,6 +5,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+import pyqtgraph as pg
+
 from PySide6.QtCore import QThread, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
@@ -13,11 +16,13 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QHeaderView,
+    QGridLayout,
     QLabel,
     QMessageBox,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
+    QScrollArea,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -394,7 +399,21 @@ class GuidedModeController:
         for column in (1, 2):
             self.easy_live_table.horizontalHeader().setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         self.easy_live_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        live_layout.addWidget(self.easy_live_table, 1)
+        self.easy_live_table.setMaximumHeight(260)
+        live_layout.addWidget(self.easy_live_table)
+
+        self.easy_plot_scroll = QScrollArea()
+        self.easy_plot_scroll.setWidgetResizable(True)
+        self.easy_plot_content = QWidget()
+        self.easy_plot_grid = QGridLayout(self.easy_plot_content)
+        self.easy_plot_scroll.setWidget(self.easy_plot_content)
+        self.easy_plot_widgets: dict[str, pg.PlotWidget] = {}
+        self.easy_plot_curves: dict[str, object] = {}
+        live_layout.addWidget(self.easy_plot_scroll, 1)
+
+        self.easy_plot_timer = QTimer(self.easy_live_tab)
+        self.easy_plot_timer.timeout.connect(self._refresh_easy_plots)
+        self.easy_plot_timer.start(400)
 
         export_row = QHBoxLayout()
         self.capture_button = QPushButton(self.tr.get("easy.start_capture", "Start recording"))
@@ -505,6 +524,52 @@ class GuidedModeController:
             self.easy_live_table.setItem(row, 0, QTableWidgetItem(self.tr.get(f"sensor.{sensor.key}", sensor.name)))
             self.easy_live_table.setItem(row, 1, QTableWidgetItem("–"))
             self.easy_live_table.setItem(row, 2, QTableWidgetItem(sensor.unit))
+        self._rebuild_easy_plots(sensors)
+
+    def _clear_easy_plot_grid(self) -> None:
+        while self.easy_plot_grid.count():
+            item = self.easy_plot_grid.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+        self.easy_plot_widgets.clear()
+        self.easy_plot_curves.clear()
+
+    def _rebuild_easy_plots(self, sensors: list[core.SensorDefinition]) -> None:
+        self._clear_easy_plot_grid()
+        for index, sensor in enumerate(sensors):
+            plot = pg.PlotWidget()
+            plot.setMinimumHeight(190)
+            plot.setTitle(self.tr.get(f"sensor.{sensor.key}", sensor.name))
+            plot.setLabel("left", sensor.unit)
+            plot.setLabel("bottom", "Time", units="s")
+            plot.showGrid(x=True, y=True, alpha=0.25)
+            plot.setDownsampling(auto=True, mode="peak")
+            plot.setClipToView(True)
+            curve = plot.plot([], [])
+            curve.setDownsampling(auto=True, method="peak")
+            curve.setClipToView(True)
+            self.easy_plot_grid.addWidget(plot, index // 2, index % 2)
+            self.easy_plot_widgets[sensor.key] = plot
+            self.easy_plot_curves[sensor.key] = curve
+
+    def _refresh_easy_plots(self) -> None:
+        if not self.easy_plot_curves:
+            return
+        end = max(10.0, float(self.window.plot_time))
+        start = max(0.0, end - 300.0)
+        for key, curve in self.easy_plot_curves.items():
+            points = self.window.history.get(key)
+            if not points:
+                curve.setData([], [])
+                continue
+            array = np.asarray(points, dtype=np.float64)
+            index = int(np.searchsorted(array[:, 0], start, side="left")) if start > 0 else 0
+            visible = array[index:]
+            curve.setData(visible[:, 0], visible[:, 1]) if visible.size else curve.setData([], [])
+            plot = self.easy_plot_widgets[key]
+            plot.setXRange(start, end, padding=0.01)
 
     def on_sample(self, key: str, value: float) -> None:
         row = self.easy_live_rows.get(key)
