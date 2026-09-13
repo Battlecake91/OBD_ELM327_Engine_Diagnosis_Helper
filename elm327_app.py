@@ -11,6 +11,7 @@ from PySide6.QtCore import QSettings, QThread, Qt, Signal, Slot
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QComboBox, QHBoxLayout, QHeaderView, QInputDialog, QLabel, QMessageBox, QPushButton, QTableWidget, QTableWidgetItem
 from elm327_twingo_gui import APP_NAME, DESKTOP_FILE_ID, ORGANIZATION_NAME, SENSORS, MainWindow as BaseWindow, TestStage
+from opel_kwp2000 import OpelKwpMixin
 APP_VERSION = '3.1.0'
 MAC_RE = re.compile('(?:[0-9A-F]{2}:){5}[0-9A-F]{2}')
 
@@ -60,7 +61,7 @@ class BluetoothScanner(QThread):
         except Exception as exc:
             self.failed.emit(str(exc))
 
-class MainWindow(BaseWindow):
+class MainWindow(OpelKwpMixin, BaseWindow):
 
     def __init__(self):
         settings = QSettings(ORGANIZATION_NAME, APP_NAME)
