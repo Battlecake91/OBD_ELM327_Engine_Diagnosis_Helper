@@ -2,6 +2,9 @@
 
 ## 3.2.0
 
+- Added guided ELM327 USB/Bluetooth connection selection with platform-specific Bluetooth setup.
+- Added Windows Bluetooth-settings handoff and Bluetooth COM-port refresh guidance.
+- Added Linux paired-device discovery and guided RFCOMM serial-port creation for Bluetooth ELM327 adapters.
 - Integrated the verified Opel Astra G X16XEL / Multec-H KWP2000 Fast-Init profile into the normal application architecture.
 - Added verified X16XEL ECU identification, live-data decoding, DTC reading and DTC clearing.
 - Added a bilingual repository-backed DTC database and JSON vehicle/live-data presets.
