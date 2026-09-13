@@ -413,7 +413,7 @@ class OpelKwpMixin:
     """Main-window mixin for the verified X16XEL/Multec-H vehicle profile."""
 
     def __init__(self):
-        self.kw82_probe_active = False
+        self.opel_profile_active = False
         super().__init__()
         if self.protocol_combo.findData(OPEL_PROTOCOL_TOKEN) < 0:
             self.protocol_combo.addItem(OPEL_PROTOCOL_LABEL, OPEL_PROTOCOL_TOKEN)
@@ -425,10 +425,10 @@ class OpelKwpMixin:
             index = self.protocol_combo.findData(OPEL_PROTOCOL_TOKEN)
             if index >= 0:
                 self.protocol_combo.setCurrentIndex(index)
-        self.protocol_combo.currentIndexChanged.connect(self._kw82_selection_changed)
-        self._kw82_selection_changed()
+        self.protocol_combo.currentIndexChanged.connect(self._opel_selection_changed)
+        self._opel_selection_changed()
 
-    def _kw82_selection_changed(self, *_args) -> None:
+    def _opel_selection_changed(self, *_args) -> None:
         selected = self.protocol_combo.currentData() == OPEL_PROTOCOL_TOKEN
         if selected and not self.connected_state:
             self.connection_detail_label.setToolTip(
@@ -438,12 +438,12 @@ class OpelKwpMixin:
             self.connection_detail_label.setToolTip("")
 
     def _effective_worker_keys(self) -> list[str]:
-        if self.kw82_probe_active:
+        if self.opel_profile_active:
             return sorted(self.enabled_keys & profile.SUPPORTED_SENSOR_KEYS)
         return super()._effective_worker_keys()
 
     def _apply_supported_state(self) -> None:
-        if not self.kw82_probe_active:
+        if not self.opel_profile_active:
             super()._apply_supported_state()
             return
         for sensor in core.SENSORS:
@@ -465,7 +465,7 @@ class OpelKwpMixin:
             return
 
         if self.protocol_combo.currentData() != OPEL_PROTOCOL_TOKEN:
-            self.kw82_probe_active = False
+            self.opel_profile_active = False
             super()._toggle_connection()
             return
 
@@ -480,7 +480,7 @@ class OpelKwpMixin:
             self._apply_pid_visibility()
 
         self._save_settings()
-        self.kw82_probe_active = True
+        self.opel_profile_active = True
         self.offline_mode = False
         self.connect_button.setText("Disconnect")
         self.connect_button.setEnabled(True)
@@ -505,13 +505,13 @@ class OpelKwpMixin:
         worker.dtcs_ready.connect(self._show_dtcs)
         worker.mode06_ready.connect(self._show_mode06)
         worker.custom_ready.connect(self._show_custom_response)
-        worker.probe_ready.connect(self._show_kw82_probe)
+        worker.probe_ready.connect(self._show_opel_session)
         worker.start()
 
     @Slot(str, object)
     def _on_connected(self, identity: str, supported: object) -> None:
         super()._on_connected(identity, supported)
-        if not self.kw82_probe_active:
+        if not self.opel_profile_active:
             return
         self.plot_start_button.setEnabled(True)
         self.polling_pause_button.setEnabled(True)
@@ -528,7 +528,7 @@ class OpelKwpMixin:
         )
 
     def _read_dtcs(self) -> None:
-        if not self.kw82_probe_active:
+        if not self.opel_profile_active:
             super()._read_dtcs()
             return
         worker = self._require_worker()
@@ -537,7 +537,7 @@ class OpelKwpMixin:
             worker.request_dtcs()
 
     def _clear_dtcs(self) -> None:
-        if not self.kw82_probe_active:
+        if not self.opel_profile_active:
             super()._clear_dtcs()
             return
         worker = self._require_worker()
@@ -555,7 +555,7 @@ class OpelKwpMixin:
 
     @Slot(object)
     def _show_dtcs(self, dtcs: object) -> None:
-        if not self.kw82_probe_active:
+        if not self.opel_profile_active:
             super()._show_dtcs(dtcs)
             return
         records = list(dtcs)
@@ -570,7 +570,7 @@ class OpelKwpMixin:
         self.dtc_output.setPlainText("\n".join(lines))
 
     @Slot(str)
-    def _show_kw82_probe(self, report: str) -> None:
+    def _show_opel_session(self, report: str) -> None:
         self.raw_output.append("\n=== Opel X16XEL / Multec-H session report ===\n" + report)
         self.dtc_output.setPlainText(
             "X16XEL / Multec-H session established.\n\nUse Read DTCs for the fault memory; live values are available on Dashboard and Plot."
@@ -578,13 +578,13 @@ class OpelKwpMixin:
 
     @Slot(str)
     def _on_disconnected(self, reason: str) -> None:
-        was_kw82 = self.kw82_probe_active
+        was_opel = self.opel_profile_active
         super()._on_disconnected(reason)
-        if was_kw82:
+        if was_opel:
             self.read_dtcs_button.setEnabled(True)
             self.clear_dtcs_button.setEnabled(True)
             self.mode06_button.setEnabled(True)
             self.single_test_button.setEnabled(True)
             self.preset_start_button.setEnabled(True)
-            self.kw82_probe_active = False
+            self.opel_profile_active = False
 
