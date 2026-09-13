@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import json
 import locale
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parent
+def resource_root() -> Path:
+    """Return the source or PyInstaller resource directory."""
+    bundled = getattr(sys, "_MEIPASS", None)
+    return Path(bundled).resolve() if bundled else Path(__file__).resolve().parent
+
+
+ROOT = resource_root()
 DATA_ROOT = ROOT / "data"
 LOCALE_ROOT = ROOT / "locales"
 
@@ -19,8 +27,20 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def language_code() -> str:
-    language = (locale.getlocale()[0] or "en").split("_", 1)[0].lower()
-    return language if language in {"de", "en"} else "en"
+    """Resolve German/English robustly across Windows and POSIX locale names."""
+    candidates = [
+        locale.getlocale()[0] or "",
+        os.environ.get("LANG", ""),
+        os.environ.get("LC_ALL", ""),
+        os.environ.get("LC_MESSAGES", ""),
+    ]
+    for raw in candidates:
+        value = str(raw).strip().lower().replace("-", "_")
+        if value.startswith(("de", "german", "deutsch")):
+            return "de"
+        if value.startswith(("en", "english")):
+            return "en"
+    return "en"
 
 
 def translations(language: str | None = None) -> dict[str, str]:
