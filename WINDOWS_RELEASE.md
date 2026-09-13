@@ -1,56 +1,64 @@
 # Standalone Windows release
 
-The Windows release is a single 64-bit executable:
+Version 3.2 ships as a portable Windows x64 release folder/ZIP. The two program files belong together:
 
-```text
+~~~text
 OBD_ELM327_Engine_Diagnosis_Helper.exe
-```
+OBD_ELM327_Updater.exe
+~~~
 
-It bundles Python, PySide6/Qt, pyserial, pyqtgraph, NumPy and the application assets. Python and the packages from `requirements.txt` are not required on the target computer.
+The main executable bundles Python, PySide6/Qt, pyserial, pyqtgraph, NumPy, diagnostic JSON data and locale files. Python is not required on the target computer.
 
 Windows still needs the normal serial or Bluetooth driver that exposes the ELM327 as a COM port.
 
 ## Portable JSON settings
 
-The executable stores all persistent settings in:
+Persistent settings are stored in settings.json next to the executable. It contains connection settings, PID presets, test routines, Bluetooth adapter entries and interface state. Application settings are not written to the Windows registry.
 
-```text
-settings.json
-```
+The self-updater preserves settings.json, update logs and downloaded update data.
 
-The file is created next to the executable at first start. It contains connection settings, PID presets, test routines, Bluetooth adapter entries and interface state. No application settings are written to the Windows registry.
+## Self-updater
 
-To move the configured application to another computer, copy both files:
+The application can check the latest GitHub release from **Hilfe / Nach Updates suchen**.
 
-```text
-OBD_ELM327_Engine_Diagnosis_Helper.exe
-settings.json
-```
+For a packaged installation it:
 
-The directory must be writable. Do not place the executable in `C:\Program Files` unless the user has write permission there. A normal folder such as Documents, Downloads or a dedicated tools directory is suitable.
+1. reads the latest GitHub release metadata,
+2. selects the Windows x64 ZIP,
+3. downloads it to the local updates directory,
+4. starts OBD_ELM327_Updater.exe from a temporary copy,
+5. closes the main application,
+6. replaces program files while preserving local settings,
+7. restarts the application.
 
-For source installations, the same JSON backend is used in the platform-specific user configuration directory. The location can be overridden on any platform with `ELM327_SETTINGS_PATH`.
+A source checkout is never overwritten by the self-updater.
 
 ## Creating a GitHub release
 
 1. Open **Actions** in the repository.
 2. Select **Windows executable and release**.
-3. Select **Run workflow**.
-4. Enter a tag such as `v3.1.0`.
-5. Run the workflow.
+3. Select **Run workflow** or push a v-prefixed release tag.
+4. Use a tag such as v3.2.0.
 
-The workflow runs tests, builds the one-file executable, performs a startup smoke test, generates a SHA-256 checksum and uploads both files.
+The workflow runs tests, builds both executables, signs the Windows executables through Microsoft Artifact Signing when the configured release job is used, verifies Authenticode, creates the portable ZIP and SHA-256 checksums, and uploads the release assets.
 
 ## Building locally
 
 Python is needed only on the Windows build computer:
 
-```powershell
-powershell -ExecutionPolicy Bypass -File .\build_windows.ps1
-```
+~~~powershell
+powershell -ExecutionPolicy Bypass -File .\\build_windows.ps1
+~~~
 
-The output is written to `dist`.
+The output is written to dist.
 
-## SmartScreen and code signing
+## Release assets
 
-The executable is not digitally signed. Windows SmartScreen may therefore show an unknown-publisher warning. Removing that warning reliably requires an Authenticode code-signing certificate.
+~~~text
+OBD_ELM327_Engine_Diagnosis_Helper.exe
+OBD_ELM327_Updater.exe
+OBD_ELM327_Engine_Diagnosis_Helper-windows-x64.zip
+OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt
+~~~
+
+The ZIP is the preferred end-user download because it keeps the application and updater together.
