@@ -8,7 +8,11 @@ analysis = Analysis(
     [str(ROOT / "elm327_portable.py")],
     pathex=[str(ROOT)],
     binaries=[],
-    datas=[(str(ROOT / "assets"), "assets")],
+    datas=[
+        (str(ROOT / "assets"), "assets"),
+        (str(ROOT / "data"), "data"),
+        (str(ROOT / "locales"), "locales"),
+    ],
     hiddenimports=[
         "PySide6.QtSvg",
         "serial.tools.list_ports_windows",
