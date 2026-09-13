@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QScrollArea,
+    QSizePolicy,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -144,6 +145,18 @@ class AutoDetectWorker(QThread):
             elm.close()
 
 
+class AdapterWizardPage(QWizardPage):
+    """First wizard page; complete only when a real serial port is selected."""
+
+    def __init__(self, tr: dict[str, str], parent=None):
+        super().__init__(parent)
+        self.tr = tr
+        self.port_combo: QComboBox | None = None
+
+    def isComplete(self) -> bool:
+        return bool(self.port_combo is not None and self.port_combo.currentData())
+
+
 class ConnectionWizard(QWizard):
     """Guided adapter and vehicle/interface setup."""
 
@@ -154,17 +167,62 @@ class ConnectionWizard(QWizard):
         self.detector: AutoDetectWorker | None = None
         self.setWindowTitle(tr.get("wizard.title", "Guided connection"))
         self.setMinimumSize(720, 500)
+
+        # QWizard's native Windows "Modern" style paints a bright page even
+        # when the application/system palette is dark. That makes inherited
+        # light text effectively invisible. Keep the wizard on Qt's classic
+        # palette-aware path and scope the styling to this dialog.
+        self.setWizardStyle(QWizard.WizardStyle.ClassicStyle)
+        self.setOption(QWizard.WizardOption.NoBackButtonOnStartPage, True)
+        self.setStyleSheet(
+            """
+            QWizard, QWizardPage {
+                background-color: palette(window);
+                color: palette(window-text);
+            }
+            QWizard QLabel {
+                color: palette(window-text);
+                background: transparent;
+            }
+            QWizard QComboBox {
+                min-height: 30px;
+                max-height: 34px;
+                padding: 2px 8px;
+                color: palette(text);
+                background-color: palette(base);
+            }
+            QWizard QPushButton {
+                min-height: 28px;
+                padding: 4px 12px;
+                color: palette(button-text);
+                background-color: palette(button);
+            }
+            QWizard QTextEdit {
+                color: palette(text);
+                background-color: palette(base);
+                border: 1px solid palette(mid);
+            }
+            """
+        )
         self._build_adapter_page()
         self._build_vehicle_page()
         self._build_status_page()
         self.currentIdChanged.connect(self._page_changed)
 
     def _build_adapter_page(self) -> None:
-        page = QWizardPage()
+        page = AdapterWizardPage(self.tr, self)
         page.setTitle(self.tr.get("wizard.adapter", "Adapter"))
         layout = QVBoxLayout(page)
         layout.addWidget(QLabel(self.tr.get("wizard.adapter_intro", "Select an ELM327 or compatible adapter.")))
         self.port_combo = QComboBox()
+        self.port_combo.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
+        )
+        self.port_combo.setMinimumHeight(30)
+        self.port_combo.setMaximumHeight(34)
+        page.port_combo = self.port_combo
+        self.port_combo.currentIndexChanged.connect(page.completeChanged.emit)
         layout.addWidget(self.port_combo)
 
         refresh = QPushButton(self.tr.get("wizard.refresh_ports", "Refresh ports"))
@@ -196,6 +254,9 @@ class ConnectionWizard(QWizard):
         selected = self.port_combo.findData(current)
         if selected >= 0:
             self.port_combo.setCurrentIndex(selected)
+        page = self.page(0)
+        if isinstance(page, AdapterWizardPage):
+            page.completeChanged.emit()
 
     def _build_vehicle_page(self) -> None:
         page = QWizardPage()
