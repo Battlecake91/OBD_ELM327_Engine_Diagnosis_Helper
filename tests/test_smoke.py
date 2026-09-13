@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QWizard
 
 from elm327_app import APP_VERSION, BluetoothScanner, MainWindow, stage_dict, stage_value
 from diagnostic_data import translations
-from guided_mode import AdapterWizardPage, ConnectionWizard
+from guided_mode import AdapterTypePage, AdapterWizardPage, ConnectionWizard
 from elm327_twingo_gui import TestStage
 
 
@@ -110,10 +110,39 @@ def test_guided_connection_wizard_uses_palette_aware_classic_style(tmp_path, mon
         assert wizard.port_combo.minimumHeight() == 30
         assert wizard.port_combo.maximumHeight() == 34
 
-        first_page = wizard.page(0)
-        assert isinstance(first_page, AdapterWizardPage)
+        type_page = wizard.page(wizard.adapter_type_page_id)
+        adapter_page = wizard.page(wizard.adapter_page_id)
+        assert isinstance(type_page, AdapterTypePage)
+        assert isinstance(adapter_page, AdapterWizardPage)
+        assert type_page.isComplete() is False
+
+        type_page.usb_button.click()
+        assert type_page.adapter_kind() == "usb"
+        assert type_page.isComplete() is True
+
+        type_page.bluetooth_button.click()
+        assert type_page.adapter_kind() == "bluetooth"
+        assert type_page.isComplete() is True
+
         if not wizard.port_combo.currentData():
-            assert first_page.isComplete() is False
+            assert adapter_page.isComplete() is False
+    finally:
+        wizard.close()
+        window.close()
+
+
+def test_guided_bluetooth_path_exposes_platform_setup_controls(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
+    window = MainWindow()
+    wizard = ConnectionWizard(window, translations("en"), window)
+    try:
+        wizard.adapter_type_page.bluetooth_button.click()
+        wizard._configure_adapter_page()
+        assert wizard.bluetooth_group.isVisible() is False or not wizard.bluetooth_group.isHidden()
+        assert wizard._adapter_kind() == "bluetooth"
+        assert wizard.windows_bt_settings_button.text()
+        assert wizard.linux_bt_scan_button.text()
+        assert wizard.linux_bt_create_button.text()
     finally:
         wizard.close()
         window.close()
