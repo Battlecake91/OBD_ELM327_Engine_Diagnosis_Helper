@@ -63,6 +63,7 @@ jobs:
           name: unsigned-windows-x64
           path: |
             dist/OBD_ELM327_Engine_Diagnosis_Helper.exe
+            dist/OBD_ELM327_Updater.exe
             dist/OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt
           if-no-files-found: error
           retention-days: 7
@@ -132,29 +133,45 @@ jobs:
           endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
           signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
-          files: ${{ github.workspace }}\dist\OBD_ELM327_Engine_Diagnosis_Helper.exe
+          files: |
+            ${{ github.workspace }}\dist\OBD_ELM327_Engine_Diagnosis_Helper.exe
+            ${{ github.workspace }}\dist\OBD_ELM327_Updater.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-      - name: Verify Authenticode signature
+      - name: Verify Authenticode signatures
         shell: pwsh
         run: |
-          $ExePath = "dist\OBD_ELM327_Engine_Diagnosis_Helper.exe"
-          $Signature = Get-AuthenticodeSignature -FilePath $ExePath
-          $Signature | Format-List Status, StatusMessage, SignerCertificate, TimeStamperCertificate
-
-          if ($Signature.Status -ne "Valid") {
-              throw "Authenticode signature verification failed: $($Signature.Status) - $($Signature.StatusMessage)"
+          $Files = @(
+              "dist\OBD_ELM327_Engine_Diagnosis_Helper.exe",
+              "dist\OBD_ELM327_Updater.exe"
+          )
+          foreach ($File in $Files) {
+              $Signature = Get-AuthenticodeSignature -FilePath $File
+              $Signature | Format-List Status, StatusMessage, SignerCertificate, TimeStamperCertificate
+              if ($Signature.Status -ne "Valid") {
+                  throw "Authenticode signature verification failed for $File: $($Signature.Status) - $($Signature.StatusMessage)"
+              }
           }
 
-      - name: Generate checksum for signed executable
+      - name: Package signed portable release
         shell: pwsh
         run: |
           $ExePath = "dist\OBD_ELM327_Engine_Diagnosis_Helper.exe"
+          $UpdaterPath = "dist\OBD_ELM327_Updater.exe"
+          $ZipPath = "dist\OBD_ELM327_Engine_Diagnosis_Helper-windows-x64.zip"
           $HashPath = "dist\OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt"
-          $Hash = (Get-FileHash -Path $ExePath -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$Hash  OBD_ELM327_Engine_Diagnosis_Helper.exe" | Set-Content -Path $HashPath -Encoding ascii
+
+          if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
+          Compress-Archive -Path $ExePath, $UpdaterPath -DestinationPath $ZipPath -CompressionLevel Optimal
+
+          $Lines = @()
+          foreach ($File in @($ExePath, $UpdaterPath, $ZipPath)) {
+              $Hash = (Get-FileHash -Path $File -Algorithm SHA256).Hash.ToLowerInvariant()
+              $Lines += "$Hash  $([System.IO.Path]::GetFileName($File))"
+          }
+          $Lines | Set-Content -Path $HashPath -Encoding ascii
 
       - name: Upload signed Windows artifact
         uses: actions/upload-artifact@v4
@@ -162,6 +179,8 @@ jobs:
           name: OBD_ELM327_Engine_Diagnosis_Helper-windows-x64-signed
           path: |
             dist/OBD_ELM327_Engine_Diagnosis_Helper.exe
+            dist/OBD_ELM327_Updater.exe
+            dist/OBD_ELM327_Engine_Diagnosis_Helper-windows-x64.zip
             dist/OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt
           if-no-files-found: error
           retention-days: 30
@@ -199,6 +218,8 @@ jobs:
         run: |
           $Files = @(
               "dist/OBD_ELM327_Engine_Diagnosis_Helper.exe",
+              "dist/OBD_ELM327_Updater.exe",
+              "dist/OBD_ELM327_Engine_Diagnosis_Helper-windows-x64.zip",
               "dist/OBD_ELM327_Engine_Diagnosis_Helper.sha256.txt"
           )
 
