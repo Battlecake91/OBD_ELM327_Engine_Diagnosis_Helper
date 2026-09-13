@@ -1,0 +1,113 @@
+name: Linux executable and release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, for example v3.1.0"
+        required: true
+        default: "v3.1.0"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: |
+            requirements.txt
+            requirements-build.txt
+
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 zip
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-build.txt
+
+      - name: Build and test
+        run: chmod +x build_linux.sh && ./build_linux.sh --skip-install
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OBD_ELM327_Engine_Diagnosis_Helper-linux-x86_64
+          path: |
+            dist/OBD_ELM327_Engine_Diagnosis_Helper
+            dist/OBD_ELM327_Updater
+            dist/OBD_ELM327_Engine_Diagnosis_Helper-linux-x86_64.zip
+            dist/OBD_ELM327_Engine_Diagnosis_Helper-linux-x86_64.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  release-linux:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    needs: build-linux
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: OBD_ELM327_Engine_Diagnosis_Helper-linux-x86_64
+          path: dist
+
+      - name: Resolve release tag
+        id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="$REF_NAME"
+          fi
+          if [[ -z "$TAG" ]]; then
+            echo "Release tag is required." >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Linux assets to GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          FILES=(
+            "dist/OBD_ELM327_Engine_Diagnosis_Helper-linux-x86_64.zip"
+            "dist/OBD_ELM327_Engine_Diagnosis_Helper-linux-x86_64.sha256.txt"
+          )
+
+          for attempt in {1..12}; do
+            if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release upload "$RELEASE_TAG" "${FILES[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+              exit 0
+            fi
+            sleep 5
+          done
+
+          # Windows normally creates the release. If it has not appeared after
+          # one minute, create it here so Linux-only manual releases still work.
+          gh release create "$RELEASE_TAG" "${FILES[@]}"             --repo "$GITHUB_REPOSITORY"             --target "$GITHUB_SHA"             --title "ELM327 Live Diagnostic $RELEASE_TAG"             --generate-notes
