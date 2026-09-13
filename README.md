@@ -33,7 +33,7 @@ The application is intended for diagnostic measurements, repeatable RPM tests an
 
 ### Easy and Expert modes
 
-At startup the application asks whether to open the guided Easy workflow or the complete Expert interface. A compact **Easy | Expert** switch remains visible at the top of the main window.
+At startup the application asks whether to open the guided Easy workflow or the complete Expert interface. A compact **Expert | Easy** switch remains visible at the top of the main window.
 
 Easy mode intentionally exposes only:
 
