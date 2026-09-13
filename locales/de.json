@@ -66,5 +66,8 @@
   "sensor.runtime": "Motorlaufzeit",
   "sensor.fuel_level": "Kraftstofffüllstand",
   "sensor.ecu_voltage": "Steuergeräte-/Bordnetzspannung",
-  "easy.time": "Zeit"
+  "easy.time": "Zeit",
+  "easy.clear_title": "Fehlerspeicher löschen",
+  "easy.clear_confirm": "Fehlerspeicher wirklich löschen? Je nach Fahrzeug werden dabei auch Freeze-Frame- und Readiness-Informationen zurückgesetzt.",
+  "easy.reading_dtcs": "Fehlerspeicher wird ausgelesen …"
 }
