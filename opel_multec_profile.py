@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import elm327_twingo_gui as core
+from diagnostic_data import dtc_database
 
 
 OPEL_LIVE_REQUEST = "2101"
@@ -34,51 +35,21 @@ class DTCRecord:
     status: int
 
 
-# Curated for the X16XEL / Multec-H family. Unknown codes are still returned
-# verbatim so the UI never hides diagnostic information just because our table
-# is incomplete.
-DTC_DESCRIPTIONS: dict[str, str] = {
-    "P0105": "Manifold absolute pressure (MAP) sensor signal fault",
-    "P0110": "Intake air temperature sensor circuit fault",
-    "P0115": "Engine coolant temperature sensor circuit fault",
-    "P0120": "Throttle position sensor circuit fault",
-    "P0130": "Oxygen sensor circuit fault",
-    "P0135": "Oxygen sensor heater circuit fault",
-    "P0170": "Fuel trim malfunction / mixture adaptation out of range",
-    "P0200": "Injector circuit malfunction",
-    "P0230": "Fuel pump relay primary circuit fault",
-    "P0325": "Knock sensor circuit fault",
-    "P0335": "Crankshaft position / engine speed signal fault",
-    "P0340": "Camshaft position sensor circuit fault",
-    "P0351": "Ignition coil circuit, cylinders 1 and 4",
-    "P0352": "Ignition coil circuit, cylinders 2 and 3",
-    "P0400": "EGR system flow/function fault",
-    "P0443": "EVAP purge valve circuit fault",
-    "P0480": "Cooling fan relay/control circuit fault, low stage",
-    "P0481": "Cooling fan relay/control circuit fault, high stage",
-    "P0500": "Vehicle speed signal fault",
-    "P0505": "Idle speed control / idle air control fault",
-    "P0530": "A/C refrigerant pressure sensor circuit fault",
-    "P0560": "System voltage malfunction",
-    "P0602": "Control module programming/configuration fault",
-    "P0650": "Malfunction indicator lamp (MIL) control circuit fault",
-    "P0660": "Coolant warning output/control circuit fault",
-    "P1231": "Fuel pump relay/contact fault",
-    "P1405": "EGR valve position/control fault",
-    "P1484": "Cooling fan relay/control fault",
-    "P1530": "A/C compressor relay/control circuit fault",
-    "P1540": "A/C pressure signal fault",
-    "P1604": "Engine control module internal fault",
-    "P1605": "Engine control module programming/internal fault",
-    "P1610": "Immobilizer not programmed / immobilizer fault",
-    "P1611": "Incorrect immobilizer/security code",
-    "P1612": "Immobilizer signal missing or incorrect",
-    "P1613": "Immobilizer signal missing or incorrect",
-    "P1614": "Incorrect immobilizer transponder/key",
-    "P1622": "Fuel pump relay/contact fault",
-    "P1640": "Quad driver module / output driver fault",
-    "P1813": "Torque control signal incorrect (automatic transmission)",
-}
+# Human-readable DTC texts live in data/dtc_codes.json so they can be translated
+# and updated independently of the protocol parser.
+def _load_opel_dtc_descriptions() -> dict[str, str]:
+    manufacturers = dtc_database().get("manufacturers", {})
+    opel = manufacturers.get("opel", {}) if isinstance(manufacturers, dict) else {}
+    codes = opel.get("codes", {}) if isinstance(opel, dict) else {}
+    result: dict[str, str] = {}
+    if isinstance(codes, dict):
+        for code, value in codes.items():
+            if isinstance(value, dict):
+                result[str(code).upper()] = str(value.get("en") or value.get("de") or "")
+    return result
+
+
+DTC_DESCRIPTIONS = _load_opel_dtc_descriptions()
 
 
 # Sensor keys intentionally reuse the application's existing generic names.
