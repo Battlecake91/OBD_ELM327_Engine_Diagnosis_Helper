@@ -90,10 +90,15 @@ class AutoDetectWorker(QThread):
 
             generic_attempts = [
                 ("ATSP0", "OBD-II automatic"),
+                ("ATSP1", "SAE J1850 PWM"),
+                ("ATSP2", "SAE J1850 VPW"),
                 ("ATSP3", "ISO 9141-2"),
                 ("ATSP4", "ISO 14230 KWP Slow Init"),
                 ("ATSP5", "ISO 14230 KWP Fast Init"),
-                ("ATSP6", "ISO 15765 CAN 11/500"),
+                ("ATSP6", "ISO 15765 CAN 11 bit / 500 kbit/s"),
+                ("ATSP7", "ISO 15765 CAN 29 bit / 500 kbit/s"),
+                ("ATSP8", "ISO 15765 CAN 11 bit / 250 kbit/s"),
+                ("ATSP9", "ISO 15765 CAN 29 bit / 250 kbit/s"),
             ]
             for protocol, label in generic_attempts:
                 if self.isInterruptionRequested():
@@ -106,6 +111,16 @@ class AutoDetectWorker(QThread):
                     if self._has_standard_obd_reply(raw):
                         self.detected.emit(protocol, "generic_obd2", self._text("detect.generic_found", "Standard OBD-II detected ({protocol})", protocol=label))
                         return
+                    lines = core.ELM327.clean_lines(raw, "0100")
+                    answer = lines[0] if lines else "no response"
+                    self.status.emit(
+                        self._text(
+                            "detect.response_unusable",
+                            "{protocol}: response received, but no usable OBD-II 41 00 reply ({answer})",
+                            protocol=label,
+                            answer=answer,
+                        )
+                    )
                 except Exception as exc:
                     self.status.emit(self._text("detect.no_reply", "{protocol}: no usable response ({error})", protocol=label, error=exc))
 
