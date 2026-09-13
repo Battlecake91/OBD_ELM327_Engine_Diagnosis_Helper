@@ -215,10 +215,6 @@
         "P0700": {
           "de": "Getriebesteuerung: Fehleranforderung/MIL",
           "en": "Transmission control system malfunction"
-        },
-        "P1100": {
-          "de": "Herstellerspezifischer Antriebsstrangfehler",
-          "en": "Manufacturer-specific powertrain fault"
         }
       }
     },
