@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "id": "opel_astra_g_x16xel_multec_h",
+  "manufacturer": "opel",
+  "display_name": {
+    "de": "Opel Astra G X16XEL / Multec-H",
+    "en": "Opel Astra G X16XEL / Multec-H"
+  },
+  "years": "1998-2000",
+  "interface": {
+    "transport": "K-Line",
+    "dlc_pin": 7,
+    "protocol": "ISO 14230-4 KWP2000 Fast Init",
+    "target_address": "0x11",
+    "tester_address": "0xF1",
+    "settings_token": "OPEL_KW82_9600"
+  },
+  "dtc": {
+    "read": "1800FF00",
+    "clear": "14FF00",
+    "manufacturer": "opel"
+  },
+  "live_request": "2101",
+  "supported_keys": [
+    "rpm",
+    "map",
+    "ecu_voltage",
+    "coolant",
+    "iat",
+    "throttle",
+    "load",
+    "timing",
+    "speed",
+    "o2_b1s1"
+  ],
+  "live_presets": [
+    {
+      "id": "forum_basic",
+      "name": {
+        "de": "Forum - Basiswerte",
+        "en": "Forum - basic values"
+      },
+      "keys": [
+        "rpm",
+        "coolant",
+        "iat",
+        "map",
+        "ecu_voltage",
+        "throttle",
+        "load",
+        "o2_b1s1"
+      ]
+    },
+    {
+      "id": "egr",
+      "name": {
+        "de": "AGR / EGR Diagnose",
+        "en": "EGR diagnostics"
+      },
+      "keys": [
+        "rpm",
+        "map",
+        "throttle",
+        "load",
+        "timing",
+        "o2_b1s1"
+      ]
+    },
+    {
+      "id": "cold_start",
+      "name": {
+        "de": "Kaltstart",
+        "en": "Cold start"
+      },
+      "keys": [
+        "rpm",
+        "coolant",
+        "iat",
+        "map",
+        "ecu_voltage"
+      ]
+    },
+    {
+      "id": "charging",
+      "name": {
+        "de": "Ladesystem",
+        "en": "Charging system"
+      },
+      "keys": [
+        "rpm",
+        "ecu_voltage"
+      ]
+    },
+    {
+      "id": "full",
+      "name": {
+        "de": "Alle verifizierten Live-Daten",
+        "en": "All verified live data"
+      },
+      "keys": [
+        "rpm",
+        "map",
+        "ecu_voltage",
+        "coolant",
+        "iat",
+        "throttle",
+        "load",
+        "timing",
+        "speed",
+        "o2_b1s1"
+      ]
+    }
+  ]
+}
