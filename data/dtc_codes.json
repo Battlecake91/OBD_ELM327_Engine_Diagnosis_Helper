@@ -3,7 +3,224 @@
   "manufacturers": {
     "generic": {
       "name": "Generic OBD-II",
-      "codes": {}
+      "codes": {
+        "P0100": {
+          "de": "Luftmassen-/Luftmengenmesser: Stromkreisfehler",
+          "en": "Mass or volume air flow circuit malfunction"
+        },
+        "P0101": {
+          "de": "Luftmassen-/Luftmengenmesser: Bereich/Funktion",
+          "en": "Mass or volume air flow circuit range/performance"
+        },
+        "P0102": {
+          "de": "Luftmassen-/Luftmengenmesser: Signal zu niedrig",
+          "en": "Mass or volume air flow circuit low input"
+        },
+        "P0103": {
+          "de": "Luftmassen-/Luftmengenmesser: Signal zu hoch",
+          "en": "Mass or volume air flow circuit high input"
+        },
+        "P0105": {
+          "de": "Saugrohrdruck-/Barometersensor: Stromkreisfehler",
+          "en": "MAP/barometric pressure circuit malfunction"
+        },
+        "P0106": {
+          "de": "Saugrohrdruck-/Barometersensor: Bereich/Funktion",
+          "en": "MAP/barometric pressure circuit range/performance"
+        },
+        "P0110": {
+          "de": "Ansauglufttemperatursensor: Stromkreisfehler",
+          "en": "Intake air temperature sensor circuit malfunction"
+        },
+        "P0115": {
+          "de": "Kühlmitteltemperatursensor: Stromkreisfehler",
+          "en": "Engine coolant temperature sensor circuit malfunction"
+        },
+        "P0120": {
+          "de": "Drosselklappen-/Pedalpositionssensor A: Stromkreisfehler",
+          "en": "Throttle/pedal position sensor A circuit malfunction"
+        },
+        "P0121": {
+          "de": "Drosselklappen-/Pedalpositionssensor A: Bereich/Funktion",
+          "en": "Throttle/pedal position sensor A range/performance"
+        },
+        "P0130": {
+          "de": "Lambdasonde Bank 1 Sensor 1: Stromkreisfehler",
+          "en": "Oxygen sensor circuit malfunction, bank 1 sensor 1"
+        },
+        "P0131": {
+          "de": "Lambdasonde Bank 1 Sensor 1: Spannung zu niedrig",
+          "en": "Oxygen sensor circuit low voltage, bank 1 sensor 1"
+        },
+        "P0132": {
+          "de": "Lambdasonde Bank 1 Sensor 1: Spannung zu hoch",
+          "en": "Oxygen sensor circuit high voltage, bank 1 sensor 1"
+        },
+        "P0133": {
+          "de": "Lambdasonde Bank 1 Sensor 1: langsame Reaktion",
+          "en": "Oxygen sensor circuit slow response, bank 1 sensor 1"
+        },
+        "P0134": {
+          "de": "Lambdasonde Bank 1 Sensor 1: keine Aktivität",
+          "en": "Oxygen sensor circuit no activity detected, bank 1 sensor 1"
+        },
+        "P0135": {
+          "de": "Lambdasonde Bank 1 Sensor 1: Heizkreisfehler",
+          "en": "Oxygen sensor heater circuit malfunction, bank 1 sensor 1"
+        },
+        "P0140": {
+          "de": "Lambdasonde Bank 1 Sensor 2: keine Aktivität",
+          "en": "Oxygen sensor circuit no activity detected, bank 1 sensor 2"
+        },
+        "P0141": {
+          "de": "Lambdasonde Bank 1 Sensor 2: Heizkreisfehler",
+          "en": "Oxygen sensor heater circuit malfunction, bank 1 sensor 2"
+        },
+        "P0170": {
+          "de": "Gemischregelung Bank 1 fehlerhaft",
+          "en": "Fuel trim malfunction, bank 1"
+        },
+        "P0171": {
+          "de": "Gemisch zu mager, Bank 1",
+          "en": "System too lean, bank 1"
+        },
+        "P0172": {
+          "de": "Gemisch zu fett, Bank 1",
+          "en": "System too rich, bank 1"
+        },
+        "P0200": {
+          "de": "Einspritzventil-Stromkreis fehlerhaft",
+          "en": "Injector circuit malfunction"
+        },
+        "P0300": {
+          "de": "Zufällige/mehrfache Verbrennungsaussetzer erkannt",
+          "en": "Random/multiple cylinder misfire detected"
+        },
+        "P0301": {
+          "de": "Verbrennungsaussetzer Zylinder 1",
+          "en": "Cylinder 1 misfire detected"
+        },
+        "P0302": {
+          "de": "Verbrennungsaussetzer Zylinder 2",
+          "en": "Cylinder 2 misfire detected"
+        },
+        "P0303": {
+          "de": "Verbrennungsaussetzer Zylinder 3",
+          "en": "Cylinder 3 misfire detected"
+        },
+        "P0304": {
+          "de": "Verbrennungsaussetzer Zylinder 4",
+          "en": "Cylinder 4 misfire detected"
+        },
+        "P0305": {
+          "de": "Verbrennungsaussetzer Zylinder 5",
+          "en": "Cylinder 5 misfire detected"
+        },
+        "P0306": {
+          "de": "Verbrennungsaussetzer Zylinder 6",
+          "en": "Cylinder 6 misfire detected"
+        },
+        "P0307": {
+          "de": "Verbrennungsaussetzer Zylinder 7",
+          "en": "Cylinder 7 misfire detected"
+        },
+        "P0308": {
+          "de": "Verbrennungsaussetzer Zylinder 8",
+          "en": "Cylinder 8 misfire detected"
+        },
+        "P0325": {
+          "de": "Klopfsensor 1: Stromkreisfehler",
+          "en": "Knock sensor 1 circuit malfunction"
+        },
+        "P0335": {
+          "de": "Kurbelwellensensor A: Stromkreisfehler",
+          "en": "Crankshaft position sensor A circuit malfunction"
+        },
+        "P0340": {
+          "de": "Nockenwellensensor A Bank 1: Stromkreisfehler",
+          "en": "Camshaft position sensor A circuit malfunction, bank 1"
+        },
+        "P0400": {
+          "de": "Abgasrückführung (AGR/EGR): Durchflussfehler",
+          "en": "Exhaust gas recirculation flow malfunction"
+        },
+        "P0401": {
+          "de": "AGR/EGR-Durchfluss zu gering",
+          "en": "Exhaust gas recirculation flow insufficient detected"
+        },
+        "P0402": {
+          "de": "AGR/EGR-Durchfluss zu hoch",
+          "en": "Exhaust gas recirculation flow excessive detected"
+        },
+        "P0420": {
+          "de": "Katalysatorwirkung unter Grenzwert, Bank 1",
+          "en": "Catalyst system efficiency below threshold, bank 1"
+        },
+        "P0430": {
+          "de": "Katalysatorwirkung unter Grenzwert, Bank 2",
+          "en": "Catalyst system efficiency below threshold, bank 2"
+        },
+        "P0440": {
+          "de": "Tankentlüftungssystem (EVAP): Fehler",
+          "en": "Evaporative emission control system malfunction"
+        },
+        "P0441": {
+          "de": "Tankentlüftungssystem (EVAP): falscher Spülstrom",
+          "en": "Evaporative emission control system incorrect purge flow"
+        },
+        "P0442": {
+          "de": "Tankentlüftungssystem (EVAP): kleines Leck erkannt",
+          "en": "Evaporative emission control system leak detected, small leak"
+        },
+        "P0443": {
+          "de": "Tankentlüftungsventil: Stromkreisfehler",
+          "en": "Evaporative emission control system purge valve circuit malfunction"
+        },
+        "P0455": {
+          "de": "Tankentlüftungssystem (EVAP): großes Leck erkannt",
+          "en": "Evaporative emission control system leak detected, gross leak"
+        },
+        "P0456": {
+          "de": "Tankentlüftungssystem (EVAP): sehr kleines Leck erkannt",
+          "en": "Evaporative emission control system leak detected, very small leak"
+        },
+        "P0500": {
+          "de": "Fahrgeschwindigkeitssensor: Fehler",
+          "en": "Vehicle speed sensor malfunction"
+        },
+        "P0505": {
+          "de": "Leerlaufregelung: Fehler",
+          "en": "Idle control system malfunction"
+        },
+        "P0560": {
+          "de": "Systemspannung fehlerhaft",
+          "en": "System voltage malfunction"
+        },
+        "P0600": {
+          "de": "Serielle Kommunikation des Steuergeräts fehlerhaft",
+          "en": "Serial communication link malfunction"
+        },
+        "P0601": {
+          "de": "Steuergerät: Speicher-Prüfsummenfehler",
+          "en": "Internal control module memory checksum error"
+        },
+        "P0602": {
+          "de": "Steuergerät: Programmierungsfehler",
+          "en": "Control module programming error"
+        },
+        "P0606": {
+          "de": "Steuergerät/Prozessor fehlerhaft",
+          "en": "ECM/PCM processor fault"
+        },
+        "P0700": {
+          "de": "Getriebesteuerung: Fehleranforderung/MIL",
+          "en": "Transmission control system malfunction"
+        },
+        "P1100": {
+          "de": "Herstellerspezifischer Antriebsstrangfehler",
+          "en": "Manufacturer-specific powertrain fault"
+        }
+      }
     },
     "opel": {
       "name": "Opel / Vauxhall",
