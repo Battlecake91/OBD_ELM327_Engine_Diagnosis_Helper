@@ -70,5 +70,20 @@
   "easy.clear_title": "Fehlerspeicher löschen",
   "easy.clear_confirm": "Fehlerspeicher wirklich löschen? Je nach Fahrzeug werden dabei auch Freeze-Frame- und Readiness-Informationen zurückgesetzt.",
   "easy.reading_dtcs": "Fehlerspeicher wird ausgelesen …",
-  "detect.response_unusable": "{protocol}: Antwort erhalten, aber keine verwertbare OBD-II-Antwort 41 00 ({answer})"
+  "detect.response_unusable": "{protocol}: Antwort erhalten, aber keine verwertbare OBD-II-Antwort 41 00 ({answer})",
+  "menu.help": "Hilfe",
+  "update.check": "Nach Updates suchen …",
+  "update.title": "Updater",
+  "update.packaged_only": "Der Selbst-Updater ist nur in einem gepackten Release aktiv. Beim Start aus dem Quellcode wird das Repository nicht überschrieben.",
+  "update.check_failed": "Update-Prüfung fehlgeschlagen",
+  "update.none_title": "Kein Update",
+  "update.none": "Installierte Version: {current}\\nAktuelles Release: {latest}",
+  "update.available_title": "Update verfügbar",
+  "update.available": "Version {latest} ist verfügbar.\\n\\nDatei: {asset}\\n\\nJetzt herunterladen und installieren? Die Anwendung wird neu gestartet.",
+  "update.downloading": "Update wird heruntergeladen …",
+  "update.cancel": "Abbrechen",
+  "update.progress_title": "ELM327 Diagnose-Helper aktualisieren",
+  "update.cancelled": "Update wurde abgebrochen.",
+  "update.starting": "Updater wird gestartet …",
+  "update.failed": "Update fehlgeschlagen"
 }
