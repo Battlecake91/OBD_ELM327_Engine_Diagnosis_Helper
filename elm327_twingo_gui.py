@@ -1526,10 +1526,15 @@ class MainWindow(QMainWindow):
         self.protocol_combo = QComboBox()
         for label, command in [
             ("Automatic", "ATSP0"),
+            ("SAE J1850 PWM", "ATSP1"),
+            ("SAE J1850 VPW", "ATSP2"),
             ("ISO 9141-2", "ATSP3"),
             ("ISO 14230-4 KWP (5 baud init)", "ATSP4"),
             ("ISO 14230-4 KWP (fast init)", "ATSP5"),
             ("ISO 15765-4 CAN 11 bit / 500 kbit", "ATSP6"),
+            ("ISO 15765-4 CAN 29 bit / 500 kbit", "ATSP7"),
+            ("ISO 15765-4 CAN 11 bit / 250 kbit", "ATSP8"),
+            ("ISO 15765-4 CAN 29 bit / 250 kbit", "ATSP9"),
         ]:
             self.protocol_combo.addItem(label, command)
         saved_protocol = str(self.settings.value("connection/protocol", "ATSP0"))
